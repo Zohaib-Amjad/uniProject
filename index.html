@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuizPro Admin — Quiz Management System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+  <link href="css/style.css" rel="stylesheet" />
+  <script src="js/storage.js"></script>
+  <script>
+    QMS.seedIfNeeded();
+    if (!QMS.isAuthenticated()) {
+      location.replace('login.html?next=' + encodeURIComponent('index.html' + (location.hash || '#dashboard')));
+    }
+  </script>
+</head>
+<body data-app="admin">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">Q</div>
+        <div class="brand-text">
+          <span data-system-name>QuizPro Admin</span>
+          <small>Quiz Management ERP</small>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-link active" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i><span class="nav-label">Dashboard</span></button>
+        <button class="nav-link" data-page="quizzes"><i class="fa-solid fa-list-check"></i><span class="nav-label">Quiz Management</span></button>
+        <button class="nav-link" data-page="create-quiz"><i class="fa-solid fa-plus"></i><span class="nav-label">Create Quiz</span></button>
+        <button class="nav-link" data-page="questions"><i class="fa-solid fa-circle-question"></i><span class="nav-label">Question Bank</span></button>
+        <button class="nav-link" data-page="categories"><i class="fa-solid fa-tags"></i><span class="nav-label">Categories</span></button>
+        <button class="nav-link" data-page="participants"><i class="fa-solid fa-users"></i><span class="nav-label">Participants</span></button>
+        <button class="nav-link" data-page="attempts"><i class="fa-solid fa-stopwatch"></i><span class="nav-label">Quiz Attempts</span></button>
+        <button class="nav-link" data-page="results"><i class="fa-solid fa-square-poll-vertical"></i><span class="nav-label">Results</span></button>
+        <button class="nav-link" data-page="reports"><i class="fa-solid fa-chart-pie"></i><span class="nav-label">Reports & Analytics</span></button>
+        <button class="nav-link" data-page="leaderboard"><i class="fa-solid fa-trophy"></i><span class="nav-label">Leaderboard</span></button>
+        <button class="nav-link" data-page="settings"><i class="fa-solid fa-gear"></i><span class="nav-label">Settings</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-logout" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i><span class="logout-label">Logout</span></button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn" id="btnToggleSidebar" aria-label="Toggle sidebar"><i class="fa-solid fa-bars"></i></button>
+          <strong data-system-name>QuizPro Admin</strong>
+        </div>
+        <div class="top-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input id="globalSearch" type="search" placeholder="Search quizzes, questions, participants..." autocomplete="off" />
+          <div id="globalSearchResults" class="dropdown-menu show d-none" style="width:100%;position:absolute;top:110%"></div>
+        </div>
+        <div class="topbar-right">
+          <span class="datetime" id="currentDateTime"></span>
+          <div class="notif-wrap">
+            <button class="icon-btn" id="btnNotifications" title="Notifications" aria-label="Notifications">
+              <i class="fa-regular fa-bell"></i><span class="notif-dot" id="notifDot"></span>
+            </button>
+            <div class="notif-panel d-none" id="notifPanel">
+              <div class="notif-panel-head">
+                <strong>Notifications</strong>
+                <button type="button" class="btn btn-sm btn-link" id="btnClearNotifs">Mark all read</button>
+              </div>
+              <div id="notifList"></div>
+            </div>
+          </div>
+          <div class="profile-chip">
+            <div class="avatar" id="topAvatar">A</div>
+            <span id="topUserName">Admin</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- Dashboard -->
+        <section class="page active" id="page-dashboard">
+          <div class="page-header">
+            <div>
+              <h1>Dashboard</h1>
+              <p>Overview of quizzes, participants, and performance.</p>
+            </div>
+          </div>
+          <div class="stat-grid" id="dashboardStats"></div>
+          <div class="chart-grid">
+            <div class="panel"><div class="panel-header"><h2>Quiz Performance</h2></div><div class="panel-body"><div class="chart-box"><canvas id="chartQuizPerformance"></canvas></div></div></div>
+            <div class="panel"><div class="panel-header"><h2>Participant Activity</h2></div><div class="panel-body"><div class="chart-box"><canvas id="chartParticipantActivity"></canvas></div></div></div>
+          </div>
+          <div class="panel mt-3">
+            <div class="panel-header"><h2>Category Performance</h2></div>
+            <div class="panel-body"><div class="chart-box" style="max-width:520px;margin:auto"><canvas id="chartCategoryPerformance"></canvas></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h2>Recent Quiz Attempts</h2></div>
+            <div class="panel-body" id="recentAttempts"></div>
+          </div>
+        </section>
+
+        <!-- Quiz Management -->
+        <section class="page" id="page-quizzes">
+          <div class="page-header">
+            <div>
+              <h1>Quiz Management</h1>
+              <p>Create, edit, activate and manage all quizzes.</p>
+            </div>
+            <button class="btn btn-brand text-white" id="btnAddQuiz"><i class="fa-solid fa-plus me-1"></i>Create Quiz</button>
+          </div>
+          <div class="toolbar">
+            <input class="form-control" id="quizSearch" placeholder="Search quizzes..." />
+            <select class="form-select" id="quizFilterCat"><option value="">All Categories</option></select>
+            <select class="form-select" id="quizFilterDiff">
+              <option value="">All Difficulty</option>
+              <option>Easy</option><option>Medium</option><option>Hard</option>
+            </select>
+            <select class="form-select" id="quizFilterStatus">
+              <option value="">All Status</option>
+              <option>Active</option><option>Inactive</option><option>Draft</option>
+            </select>
+            <input class="form-control" type="date" id="quizFilterDate" />
+            <select class="form-select" id="quizSort">
+              <option value="createdAt:desc">Sort: Newest</option>
+              <option value="title:asc">Sort: Title A-Z</option>
+              <option value="title:desc">Sort: Title Z-A</option>
+              <option value="difficulty:asc">Sort: Difficulty</option>
+              <option value="status:asc">Sort: Status</option>
+              <option value="duration:asc">Sort: Duration</option>
+            </select>
+          </div>
+          <div class="panel">
+            <div class="panel-body">
+              <div class="table-wrap desktop-table">
+                <table class="data-table" id="quizTable">
+                  <thead>
+                    <tr>
+                      <th class="sortable" data-sort="id">Quiz ID</th>
+                      <th class="sortable" data-sort="title">Title</th>
+                      <th class="sortable" data-sort="category">Category</th>
+                      <th class="sortable" data-sort="questions">Questions</th>
+                      <th class="sortable" data-sort="duration">Duration</th>
+                      <th class="sortable" data-sort="passing">Passing</th>
+                      <th class="sortable" data-sort="difficulty">Difficulty</th>
+                      <th class="sortable" data-sort="status">Status</th>
+                      <th class="sortable" data-sort="createdAt">Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="quizTableBody"></tbody>
+                </table>
+              </div>
+              <div class="mobile-cards" id="quizMobileCards"></div>
+              <div class="d-flex justify-content-end align-items-center mt-3" id="quizPagination"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Create Quiz (full page form as per requirements) -->
+        <section class="page" id="page-create-quiz">
+          <div class="page-header">
+            <div>
+              <h1>Create New Quiz</h1>
+              <p>Fill in quiz details, options, and select questions from the bank.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-body">
+              <form id="createQuizForm" class="needs-validation" novalidate>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label">Quiz Title</label>
+                    <input class="form-control" id="cqTitle" required />
+                    <div class="invalid-feedback">Quiz title is required</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Subject</label>
+                    <input class="form-control" id="cqSubject" required list="subjectList" />
+                    <datalist id="subjectList">
+                      <option value="HTML & CSS"></option>
+                      <option value="JavaScript"></option>
+                      <option value="Python"></option>
+                      <option value="Database"></option>
+                      <option value="Computer Science"></option>
+                      <option value="Mathematics"></option>
+                      <option value="Science"></option>
+                      <option value="General Knowledge"></option>
+                      <option value="English"></option>
+                    </datalist>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Quiz Description</label>
+                    <textarea class="form-control" id="cqDescription" rows="3" required></textarea>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="cqCategory" required></select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Difficulty Level</label>
+                    <select class="form-select" id="cqDifficulty"><option>Easy</option><option>Medium</option><option>Hard</option></select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Quiz Status</label>
+                    <select class="form-select" id="cqStatus"><option>Active</option><option>Inactive</option><option>Draft</option></select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Number of Questions</label>
+                    <input class="form-control" type="number" min="1" id="cqQuestionCount" required />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Quiz Duration (minutes)</label>
+                    <input class="form-control" type="number" min="1" id="cqDuration" required />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Passing Percentage</label>
+                    <input class="form-control" type="number" min="0" max="100" id="cqPassing" required />
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label">Maximum Attempts</label>
+                    <input class="form-control" type="number" min="1" id="cqMaxAttempts" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Start Date</label>
+                    <input class="form-control" type="date" id="cqStart" required />
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">End Date</label>
+                    <input class="form-control" type="date" id="cqEnd" required />
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Instructions</label>
+                    <textarea class="form-control" id="cqInstructions" rows="3"></textarea>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Select Questions</label>
+                    <select class="form-select" id="cqQuestions" multiple size="8"></select>
+                    <div class="form-text">Hold Ctrl/Cmd to multi-select questions from the Question Bank.</div>
+                  </div>
+                  <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="cqRandQ"><label class="form-check-label" for="cqRandQ">Randomize Questions</label></div></div>
+                  <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="cqRandA"><label class="form-check-label" for="cqRandA">Randomize Answers</label></div></div>
+                  <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="cqShowAns" checked><label class="form-check-label" for="cqShowAns">Show Correct Answers After Submission</label></div></div>
+                  <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="cqRetake" checked><label class="form-check-label" for="cqRetake">Allow Retake</label></div></div>
+                  <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="cqTimer" checked><label class="form-check-label" for="cqTimer">Display Timer</label></div></div>
+                  <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="cqNeg"><label class="form-check-label" for="cqNeg">Negative Marking</label></div></div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                  <button type="button" class="btn btn-brand text-white" id="btnSaveCreateQuiz">Save Quiz</button>
+                  <button type="button" class="btn btn-warning" id="btnDraftCreateQuiz">Save as Draft</button>
+                  <button type="button" class="btn btn-outline-secondary" id="btnResetCreateQuiz">Reset</button>
+                  <button type="button" class="btn btn-outline-secondary" id="btnCancelCreateQuiz">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Question Bank -->
+        <section class="page" id="page-questions">
+          <div class="page-header">
+            <div>
+              <h1>Question Bank</h1>
+              <p>Manage MCQ, True/False, Short Answer and Fill in the Blank questions.</p>
+            </div>
+            <button class="btn btn-brand text-white" id="btnAddQuestion"><i class="fa-solid fa-plus me-1"></i>Add Question</button>
+          </div>
+          <div class="toolbar">
+            <input class="form-control" id="qSearch" placeholder="Search questions..." />
+            <select class="form-select" id="qFilterCat"><option value="">All Categories</option></select>
+            <select class="form-select" id="qFilterDiff"><option value="">All Difficulty</option><option>Easy</option><option>Medium</option><option>Hard</option></select>
+            <select class="form-select" id="qFilterType"><option value="">All Types</option><option value="mcq">Multiple Choice</option><option value="truefalse">True/False</option><option value="short">Short Answer</option><option value="fillblank">Fill in the Blank</option></select>
+            <select class="form-select" id="qFilterStatus"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+            <select class="form-select" id="qSort">
+              <option value="id:asc">Sort: ID</option>
+              <option value="text:asc">Sort: Question A-Z</option>
+              <option value="difficulty:asc">Sort: Difficulty</option>
+              <option value="marks:desc">Sort: Marks High-Low</option>
+              <option value="type:asc">Sort: Type</option>
+            </select>
+          </div>
+          <div class="panel">
+            <div class="panel-body">
+              <div class="table-wrap desktop-table">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th class="sortable" data-sort-table="questions" data-sort="id">ID</th>
+                      <th class="sortable" data-sort-table="questions" data-sort="text">Question</th>
+                      <th class="sortable" data-sort-table="questions" data-sort="category">Category</th>
+                      <th class="sortable" data-sort-table="questions" data-sort="difficulty">Difficulty</th>
+                      <th class="sortable" data-sort-table="questions" data-sort="type">Type</th>
+                      <th>Correct Answer</th>
+                      <th class="sortable" data-sort-table="questions" data-sort="marks">Marks</th>
+                      <th class="sortable" data-sort-table="questions" data-sort="status">Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="questionTableBody"></tbody>
+                </table>
+              </div>
+              <div class="mobile-cards" id="questionMobileCards"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Categories -->
+        <section class="page" id="page-categories">
+          <div class="page-header">
+            <div>
+              <h1>Quiz Categories</h1>
+              <p>Organize quizzes and questions by category.</p>
+            </div>
+            <button class="btn btn-brand text-white" id="btnAddCategory"><i class="fa-solid fa-plus me-1"></i>Add Category</button>
+          </div>
+          <div class="toolbar">
+            <input class="form-control" id="catSearch" placeholder="Search categories..." />
+            <select class="form-select" id="catFilterStatus"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+            <select class="form-select" id="catSort">
+              <option value="name:asc">Sort: Name A-Z</option>
+              <option value="createdAt:desc">Sort: Newest</option>
+              <option value="status:asc">Sort: Status</option>
+            </select>
+          </div>
+          <div class="panel">
+            <div class="panel-body table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-sort-table="categories" data-sort="name">Category Name</th>
+                    <th>Description</th>
+                    <th class="sortable" data-sort-table="categories" data-sort="quizzes">Quizzes</th>
+                    <th class="sortable" data-sort-table="categories" data-sort="questions">Questions</th>
+                    <th class="sortable" data-sort-table="categories" data-sort="status">Status</th>
+                    <th class="sortable" data-sort-table="categories" data-sort="createdAt">Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="categoryTableBody"></tbody>
+              </table>
+            </div>
+            <div class="panel-body mobile-cards" id="categoryMobileCards"></div>
+          </div>
+        </section>
+
+        <!-- Participants -->
+        <section class="page" id="page-participants">
+          <div class="page-header">
+            <div>
+              <h1>Participants</h1>
+              <p>Manage participant profiles and activity.</p>
+            </div>
+            <button class="btn btn-brand text-white" id="btnAddParticipant"><i class="fa-solid fa-plus me-1"></i>Add Participant</button>
+          </div>
+          <div class="toolbar">
+            <input class="form-control" id="partSearch" placeholder="Search participants..." />
+            <select class="form-select" id="partFilterStatus"><option value="">All Status</option><option>Active</option><option>Inactive</option></select>
+            <select class="form-select" id="partSort">
+              <option value="name:asc">Sort: Name A-Z</option>
+              <option value="registeredAt:desc">Sort: Newest</option>
+              <option value="avg:desc">Sort: Avg Score</option>
+              <option value="status:asc">Sort: Status</option>
+            </select>
+          </div>
+          <div class="panel">
+            <div class="panel-body table-wrap desktop-table">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-sort-table="participants" data-sort="id">ID</th>
+                    <th class="sortable" data-sort-table="participants" data-sort="name">Name</th>
+                    <th>Email</th><th>Phone</th>
+                    <th class="sortable" data-sort-table="participants" data-sort="totalQuizzes">Total Quizzes</th>
+                    <th class="sortable" data-sort-table="participants" data-sort="completed">Completed</th>
+                    <th class="sortable" data-sort-table="participants" data-sort="avg">Avg Score</th>
+                    <th class="sortable" data-sort-table="participants" data-sort="status">Status</th>
+                    <th class="sortable" data-sort-table="participants" data-sort="registeredAt">Registered</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="participantTableBody"></tbody>
+              </table>
+            </div>
+            <div class="panel-body mobile-cards" id="participantMobileCards"></div>
+          </div>
+        </section>
+
+        <!-- Attempts -->
+        <section class="page" id="page-attempts">
+          <div class="page-header">
+            <div>
+              <h1>Quiz Attempts</h1>
+              <p>Launch a quiz attempt and review recent submissions.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h2>Start New Attempt</h2></div>
+            <div class="panel-body">
+              <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                  <label class="form-label">Quiz</label>
+                  <select class="form-select" id="attemptQuiz"></select>
+                </div>
+                <div class="col-md-5">
+                  <label class="form-label">Participant</label>
+                  <select class="form-select" id="attemptParticipant"></select>
+                </div>
+                <div class="col-md-2">
+                  <button class="btn btn-brand text-white w-100" id="btnStartAttempt">Start Quiz</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><h2>Recent Attempts</h2></div>
+            <div class="panel-body table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Participant</th><th>Quiz</th><th>Date</th><th>Score</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="attemptsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Results -->
+        <section class="page" id="page-results">
+          <div class="page-header">
+            <div>
+              <h1>Results Management</h1>
+              <p>Search, filter, view and print quiz results.</p>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input class="form-control" id="resSearch" placeholder="Search results..." />
+            <input class="form-control" type="date" id="resFilterDate" />
+            <select class="form-select" id="resFilterQuiz"><option value="">All Quizzes</option></select>
+            <select class="form-select" id="resFilterPart"><option value="">All Participants</option></select>
+            <select class="form-select" id="resFilterStatus"><option value="">Pass/Fail</option><option>Passed</option><option>Failed</option></select>
+            <select class="form-select" id="resSort">
+              <option value="date:desc">Sort: Newest</option>
+              <option value="percentage:desc">Sort: Highest Score</option>
+              <option value="percentage:asc">Sort: Lowest Score</option>
+              <option value="status:asc">Sort: Status</option>
+            </select>
+          </div>
+          <div class="panel">
+            <div class="panel-body table-wrap desktop-table">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-sort-table="results" data-sort="id">Result ID</th>
+                    <th class="sortable" data-sort-table="results" data-sort="participant">Participant</th>
+                    <th class="sortable" data-sort-table="results" data-sort="quiz">Quiz</th>
+                    <th class="sortable" data-sort-table="results" data-sort="date">Date</th>
+                    <th>Score</th>
+                    <th class="sortable" data-sort-table="results" data-sort="percentage">Percentage</th>
+                    <th>Time Taken</th>
+                    <th class="sortable" data-sort-table="results" data-sort="status">Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsTableBody"></tbody>
+              </table>
+            </div>
+            <div class="panel-body mobile-cards" id="resultsMobileCards"></div>
+          </div>
+        </section>
+
+        <!-- Reports -->
+        <section class="page" id="page-reports">
+          <div class="page-header">
+            <div>
+              <h1>Reports & Analytics</h1>
+              <p>Generate printable and downloadable performance reports.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-brand text-white" id="btnGenerateReport">Generate Report</button>
+              <button class="btn btn-outline-secondary" id="btnPrintReport">Print Report</button>
+              <button class="btn btn-outline-brand" id="btnExportQuizCSV">Export CSV</button>
+              <button class="btn btn-outline-brand" id="btnDownloadReport">Export / Download Report</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input class="form-control" type="date" id="repFrom" />
+            <input class="form-control" type="date" id="repTo" />
+            <select class="form-select" id="repQuiz"></select>
+            <select class="form-select" id="repCategory"></select>
+            <select class="form-select" id="repParticipant"></select>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <button class="btn btn-sm btn-outline-secondary" id="btnExportPartCSV">Participant CSV</button>
+            <button class="btn btn-sm btn-outline-secondary" id="btnExportCatCSV">Category CSV</button>
+            <button class="btn btn-sm btn-outline-secondary" id="btnExportResultsCSV">Result Summary CSV</button>
+            <button class="btn btn-sm btn-outline-secondary" id="btnExportLeaderCSV">Leaderboard CSV</button>
+            <button class="btn btn-sm btn-outline-secondary" id="btnExportQuestionCSV">Question Analysis CSV</button>
+          </div>
+          <div class="chart-grid">
+            <div class="panel"><div class="panel-header"><h2>Bar Chart</h2></div><div class="panel-body"><div class="chart-box"><canvas id="repBarChart"></canvas></div></div></div>
+            <div class="panel"><div class="panel-header"><h2>Doughnut Chart</h2></div><div class="panel-body"><div class="chart-box"><canvas id="repDoughnutChart"></canvas></div></div></div>
+            <div class="panel"><div class="panel-header"><h2>Line Chart</h2></div><div class="panel-body"><div class="chart-box"><canvas id="repLineChart"></canvas></div></div></div>
+            <div class="panel"><div class="panel-header"><h2>Area Performance Chart</h2></div><div class="panel-body"><div class="chart-box"><canvas id="repAreaChart"></canvas></div></div></div>
+          </div>
+          <div class="panel"><div class="panel-header"><h2>Quiz Performance Report</h2></div><div class="panel-body" id="repQuizTable"></div></div>
+          <div class="panel"><div class="panel-header"><h2>Participant Performance Report</h2></div><div class="panel-body" id="repParticipantTable"></div></div>
+          <div class="panel"><div class="panel-header"><h2>Category Report</h2></div><div class="panel-body" id="repCategoryTable"></div></div>
+        </section>
+
+        <!-- Leaderboard -->
+        <section class="page" id="page-leaderboard">
+          <div class="page-header">
+            <div>
+              <h1>Leaderboard</h1>
+              <p>Top performers ranked by points and average score.</p>
+            </div>
+          </div>
+          <div class="toolbar">
+            <select class="form-select" id="lbQuiz"></select>
+            <select class="form-select" id="lbCategory"></select>
+            <select class="form-select" id="lbPeriod">
+              <option value="all">All Time</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+          </div>
+          <div class="leader-top" id="leaderTop"></div>
+          <div class="panel">
+            <div class="panel-body table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th><th>Participant Name</th><th>Total Quizzes</th><th>Average Score</th><th>Highest Score</th><th>Total Points</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="page" id="page-settings">
+          <div class="page-header">
+            <div>
+              <h1>Settings</h1>
+              <p>General, quiz and appearance preferences (saved in LocalStorage).</p>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-lg-4">
+              <div class="panel h-100">
+                <div class="panel-header"><h2>General Settings</h2></div>
+                <div class="panel-body">
+                  <div class="mb-3"><label class="form-label">System Name</label><input class="form-control" id="setSystemName" /></div>
+                  <div class="mb-3"><label class="form-label">Admin Name</label><input class="form-control" id="setAdminName" /></div>
+                  <div class="mb-3"><label class="form-label">Email</label><input class="form-control" type="email" id="setEmail" /></div>
+                  <div class="mb-3"><label class="form-label">Default Quiz Duration (min)</label><input class="form-control" type="number" min="1" id="setDuration" /></div>
+                  <div class="mb-0"><label class="form-label">Default Passing Percentage</label><input class="form-control" type="number" min="0" max="100" id="setPassing" /></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="panel h-100">
+                <div class="panel-header"><h2>Quiz Settings</h2></div>
+                <div class="panel-body">
+                  <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="setTimer"><label class="form-check-label" for="setTimer">Enable Timer</label></div>
+                  <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="setRandQ"><label class="form-check-label" for="setRandQ">Random Questions</label></div>
+                  <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="setRandA"><label class="form-check-label" for="setRandA">Random Answers</label></div>
+                  <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="setRetakes"><label class="form-check-label" for="setRetakes">Allow Retakes</label></div>
+                  <div class="form-check form-switch mb-0"><input class="form-check-input" type="checkbox" id="setShowAns"><label class="form-check-label" for="setShowAns">Show Answers</label></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-4">
+              <div class="panel h-100">
+                <div class="panel-header"><h2>Appearance</h2></div>
+                <div class="panel-body">
+                  <div class="mb-3">
+                    <label class="form-label">Theme</label>
+                    <select class="form-select" id="setTheme"><option value="light">Light Mode</option><option value="dark">Dark Mode</option></select>
+                  </div>
+                  <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="setCompact"><label class="form-check-label" for="setCompact">Compact Sidebar</label></div>
+                  <div class="mb-3">
+                    <label class="form-label">Font Size</label>
+                    <select class="form-select" id="setFont"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select>
+                  </div>
+                  <button class="btn btn-brand text-white w-100 mb-2" id="btnSaveSettings">Save Settings</button>
+                  <button class="btn btn-outline-danger w-100" id="btnResetData">Reset Demo Data</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- Quiz Modal -->
+  <div class="modal fade" id="quizModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="quizModalTitle">Create New Quiz</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="quizForm" class="needs-validation" novalidate>
+            <input type="hidden" id="quizFormId" />
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label">Quiz Title</label><input class="form-control" id="qfTitle" required /><div class="invalid-feedback">Required</div></div>
+              <div class="col-md-6"><label class="form-label">Subject</label><input class="form-control" id="qfSubject" required /></div>
+              <div class="col-12"><label class="form-label">Quiz Description</label><textarea class="form-control" id="qfDescription" rows="2" required></textarea></div>
+              <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="qfCategory" required></select></div>
+              <div class="col-md-4"><label class="form-label">Difficulty Level</label><select class="form-select" id="qfDifficulty"><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
+              <div class="col-md-4"><label class="form-label">Quiz Status</label><select class="form-select" id="qfStatus"><option>Active</option><option>Inactive</option><option>Draft</option></select></div>
+              <div class="col-md-3"><label class="form-label">Number of Questions</label><input class="form-control" type="number" min="1" id="qfQuestionCount" required /></div>
+              <div class="col-md-3"><label class="form-label">Quiz Duration (min)</label><input class="form-control" type="number" min="1" id="qfDuration" required /></div>
+              <div class="col-md-3"><label class="form-label">Passing Percentage</label><input class="form-control" type="number" min="0" max="100" id="qfPassing" required /></div>
+              <div class="col-md-3"><label class="form-label">Maximum Attempts</label><input class="form-control" type="number" min="1" id="qfMaxAttempts" required /></div>
+              <div class="col-md-6"><label class="form-label">Start Date</label><input class="form-control" type="date" id="qfStart" required /></div>
+              <div class="col-md-6"><label class="form-label">End Date</label><input class="form-control" type="date" id="qfEnd" required /></div>
+              <div class="col-12"><label class="form-label">Instructions</label><textarea class="form-control" id="qfInstructions" rows="2"></textarea></div>
+              <div class="col-12"><label class="form-label">Select Questions</label><select class="form-select" id="qfQuestions" multiple size="6"></select><div class="form-text">Hold Ctrl/Cmd to select multiple questions.</div></div>
+              <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="qfRandQ"><label class="form-check-label" for="qfRandQ">Randomize Questions</label></div></div>
+              <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="qfRandA"><label class="form-check-label" for="qfRandA">Randomize Answers</label></div></div>
+              <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="qfShowAns"><label class="form-check-label" for="qfShowAns">Show Correct Answers After Submission</label></div></div>
+              <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="qfRetake"><label class="form-check-label" for="qfRetake">Allow Retake</label></div></div>
+              <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="qfTimer"><label class="form-check-label" for="qfTimer">Display Timer</label></div></div>
+              <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" id="qfNeg"><label class="form-check-label" for="qfNeg">Negative Marking</label></div></div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-outline-secondary" id="btnResetQuiz">Reset</button>
+          <button class="btn btn-warning" id="btnDraftQuiz">Save as Draft</button>
+          <button class="btn btn-brand text-white" id="btnSaveQuiz">Save Quiz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Question Modal -->
+  <div class="modal fade" id="questionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="questionModalTitle">Add New Question</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="questionForm" novalidate>
+            <input type="hidden" id="questionFormId" />
+            <div class="row g-3">
+              <div class="col-12"><label class="form-label">Question Text</label><textarea class="form-control" id="qqText" rows="3" required></textarea></div>
+              <div class="col-md-4"><label class="form-label">Question Type</label>
+                <select class="form-select" id="qqType">
+                  <option value="mcq">Multiple Choice</option>
+                  <option value="truefalse">True / False</option>
+                  <option value="short">Short Answer</option>
+                  <option value="fillblank">Fill in the Blank</option>
+                </select>
+              </div>
+              <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" id="qqCategory" required></select></div>
+              <div class="col-md-4"><label class="form-label">Difficulty</label><select class="form-select" id="qqDifficulty"><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
+              <div class="col-md-4"><label class="form-label">Marks</label><input class="form-control" type="number" min="1" id="qqMarks" required /></div>
+              <div class="col-md-4"><label class="form-label">Question Status</label><select class="form-select" id="qqStatus"><option>Active</option><option>Inactive</option></select></div>
+              <div class="col-md-4"><label class="form-label">Explanation</label><input class="form-control" id="qqExplanation" /></div>
+
+              <div class="col-12" id="mcqFields">
+                <div class="row g-2">
+                  <div class="col-md-6"><label class="form-label">Option A</label><input class="form-control" id="qqA" /></div>
+                  <div class="col-md-6"><label class="form-label">Option B</label><input class="form-control" id="qqB" /></div>
+                  <div class="col-md-6"><label class="form-label">Option C</label><input class="form-control" id="qqC" /></div>
+                  <div class="col-md-6"><label class="form-label">Option D</label><input class="form-control" id="qqD" /></div>
+                  <div class="col-md-6"><label class="form-label">Correct Answer</label>
+                    <select class="form-select" id="qqCorrectMCQ"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 d-none" id="tfFields">
+                <label class="form-label">Correct Answer</label>
+                <select class="form-select" id="qqCorrectTF"><option value="A">True</option><option value="B">False</option></select>
+              </div>
+
+              <div class="col-12 d-none" id="textAnswerFields">
+                <label class="form-label">Expected / Correct Answer</label>
+                <input class="form-control" id="qqCorrectText" />
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-outline-secondary" id="btnResetQuestion">Reset</button>
+          <button class="btn btn-brand text-white" id="btnSaveQuestion">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Modal -->
+  <div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="categoryModalTitle">Add Category</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="categoryForm" novalidate>
+            <input type="hidden" id="categoryFormId" />
+            <div class="mb-3"><label class="form-label">Category Name</label><input class="form-control" id="cfName" required /></div>
+            <div class="mb-3"><label class="form-label">Description</label><textarea class="form-control" id="cfDescription" rows="3"></textarea></div>
+            <div class="mb-0"><label class="form-label">Status</label><select class="form-select" id="cfStatus"><option>Active</option><option>Inactive</option></select></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-brand text-white" id="btnSaveCategory">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Participant Modal -->
+  <div class="modal fade" id="participantModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="participantModalTitle">Add Participant</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="participantForm" novalidate>
+            <input type="hidden" id="participantFormId" />
+            <div class="mb-3"><label class="form-label">Full Name</label><input class="form-control" id="pfName" required /></div>
+            <div class="mb-3"><label class="form-label">Email</label><input class="form-control" type="email" id="pfEmail" required /></div>
+            <div class="mb-3"><label class="form-label">Phone</label><input class="form-control" id="pfPhone" required /></div>
+            <div class="mb-0"><label class="form-label">Status</label><select class="form-select" id="pfStatus"><option>Active</option><option>Inactive</option></select></div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-brand text-white" id="btnSaveParticipant">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
