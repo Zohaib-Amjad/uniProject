@@ -27,7 +27,7 @@ const App = (() => {
   function requireAuth() {
     // Professional flow: logged out by default — must login with email/password
     if (!QMS.isAuthenticated()) {
-      location.replace('login.html?next=' + encodeURIComponent('index.html' + (location.hash || '#dashboard')));
+      location.replace('login.html?v=3&next=' + encodeURIComponent('index.html' + (location.hash || '#dashboard')));
       return false;
     }
     document.body.classList.add('auth-ready');
@@ -71,6 +71,7 @@ const App = (() => {
     setActiveNav(page);
     closeMobileSidebar();
     renderPage(page);
+    applyAccessibilityLabels();
   }
 
   function closeMobileSidebar() {
@@ -89,6 +90,21 @@ const App = (() => {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function applyAccessibilityLabels() {
+    document.querySelectorAll('input, select, textarea').forEach((control) => {
+      if (control.getAttribute('aria-label') || (control.id && document.querySelector(`label[for="${CSS.escape(control.id)}"]`))) return;
+      const nearbyLabel = control.closest('.mb-3, .col-md-3, .col-md-4, .col-md-6, .col-12')?.querySelector('.form-label');
+      const fallback = control.id
+        ? control.id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[-_]/g, ' ')
+        : control.type || 'field';
+      control.setAttribute('aria-label', nearbyLabel?.textContent.trim() || fallback);
+    });
+    document.querySelectorAll('.btn-close').forEach((button) => button.setAttribute('aria-label', 'Close'));
+    document.getElementById('toastWrap')?.setAttribute('role', 'status');
+    document.getElementById('toastWrap')?.setAttribute('aria-live', 'polite');
+    document.getElementById('notifList')?.setAttribute('aria-live', 'polite');
   }
 
   function statusBadge(status) {
@@ -110,16 +126,18 @@ const App = (() => {
       .join('');
   }
 
-  function optionParticipants(selected = '') {
+  function optionParticipants(selected = '', activeOnly = false) {
     return QMS.participants
       .all()
+      .filter((p) => !activeOnly || p.status === 'Active')
       .map((p) => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${esc(p.name)}</option>`)
       .join('');
   }
 
-  function optionQuizzes(selected = '') {
+  function optionQuizzes(selected = '', activeOnly = false) {
     return QMS.quizzes
       .all()
+      .filter((q) => !activeOnly || q.status === 'Active')
       .map((q) => `<option value="${q.id}" ${q.id === selected ? 'selected' : ''}>${esc(q.title)}</option>`)
       .join('');
   }
@@ -149,17 +167,17 @@ const App = (() => {
 
   function buildNotifications() {
     const recent = [...QMS.results.all()].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+    const readIds = JSON.parse(localStorage.getItem('qms_notification_reads') || '[]');
     notifications = [
-      { id: 'n1', text: `${QMS.quizzes.all().filter((q) => q.status === 'Active').length} active quizzes available`, time: 'Just now', read: false, page: 'quizzes' },
-      { id: 'n2', text: 'Remember to review draft quizzes before publishing', time: 'Today', read: false, page: 'quizzes' },
+      { id: 'n1', text: `${QMS.quizzes.all().filter((q) => q.status === 'Active').length} active quizzes available`, time: 'Just now', page: 'quizzes' },
+      { id: 'n2', text: 'Remember to review draft quizzes before publishing', time: 'Today', page: 'quizzes' },
       ...recent.map((r, i) => ({
         id: `nr_${r.id}`,
         text: `${QMS.participantName(r.participantId)} scored ${r.percentage}% on ${QMS.quizTitle(r.quizId)}`,
         time: new Date(r.date).toLocaleString(),
-        read: false,
         page: 'results'
       }))
-    ];
+    ].map((notification) => ({ ...notification, read: readIds.includes(notification.id) }));
     renderNotifications();
   }
 
@@ -285,7 +303,10 @@ const App = (() => {
           <div>${(item.questionIds || []).length} Q · ${item.duration} min · Pass ${item.passingPercentage}%</div>
         </div>
         <div class="action-btns">
+          <button class="btn btn-sm btn-outline-secondary" data-quiz-view="${item.id}">View</button>
           <button class="btn btn-sm btn-outline-brand" data-quiz-edit="${item.id}">Edit</button>
+          <button class="btn btn-sm btn-outline-secondary" data-quiz-dup="${item.id}">Duplicate</button>
+          <button class="btn btn-sm btn-outline-warning" data-quiz-toggle="${item.id}">${item.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
           <button class="btn btn-sm btn-brand text-white" data-quiz-start="${item.id}">Attempt</button>
           <button class="btn btn-sm btn-outline-danger" data-quiz-del="${item.id}">Delete</button>
         </div>
@@ -333,7 +354,7 @@ const App = (() => {
     qSel.innerHTML = QMS.questions
       .all()
       .filter((q) => q.status === 'Active')
-      .map((q) => `<option value="${q.id}" ${selected.has(q.id) ? 'selected' : ''}>${esc(q.text.slice(0, 80))}</option>`)
+      .map((q) => `<option value="${q.id}" ${selected.has(q.id) ? 'selected' : ''}>${esc(q.id)} - ${esc(q.text.slice(0, 80))}</option>`)
       .join('');
 
     bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -376,14 +397,14 @@ const App = (() => {
     };
   }
 
-  function validateQuizPayload(form, { start, end, payload }) {
+  function validateQuizPayload(form, { start, end, questionIds, payload }) {
     if (form && !form.checkValidity()) {
       form.classList.add('was-validated');
       toast('Please fix validation errors', 'error');
       return false;
     }
-    if (!payload.title || !payload.categoryId || !payload.subject) {
-      toast('Title, subject and category are required', 'error');
+    if (!payload.title || !payload.description || !payload.categoryId || !payload.subject) {
+      toast('Title, description, subject and category are required', 'error');
       return false;
     }
     if (start && end && new Date(end) < new Date(start)) {
@@ -396,6 +417,10 @@ const App = (() => {
     }
     if (!(payload.maxAttempts > 0)) {
       toast('Maximum attempts must be a positive number', 'error');
+      return false;
+    }
+    if (payload.questionCount !== questionIds.length) {
+      toast(`Select exactly ${payload.questionCount} question(s)`, 'error');
       return false;
     }
     return true;
@@ -438,7 +463,7 @@ const App = (() => {
     document.getElementById('cqQuestions').innerHTML = QMS.questions
       .all()
       .filter((q) => q.status === 'Active')
-      .map((q) => `<option value="${q.id}">${esc(q.text.slice(0, 90))}</option>`)
+      .map((q) => `<option value="${q.id}">${esc(q.id)} - ${esc(q.text.slice(0, 90))}</option>`)
       .join('');
   }
 
@@ -470,7 +495,7 @@ const App = (() => {
     const sortSel = document.getElementById('qSort')?.value;
     if (sortSel) sortState.questions = parseSortValue(sortSel, 'id');
     const filtered = QMS.questions.all().filter((item) => {
-      if (q && !item.text.toLowerCase().includes(q)) return false;
+      if (q && !`${item.id} ${item.text}`.toLowerCase().includes(q)) return false;
       if (cat && item.categoryId !== cat) return false;
       if (diff && item.difficulty !== diff) return false;
       if (type && item.type !== type) return false;
@@ -513,7 +538,7 @@ const App = (() => {
       list
         .map(
           (item) => `<div class="mobile-card">
-        <h4>${esc(item.text.slice(0, 90))}</h4>
+        <h4><span class="question-id">${esc(item.id)}</span> ${esc(item.text.slice(0, 90))}</h4>
         <div class="mobile-meta">${esc(item.type)} · ${esc(item.difficulty)} · ${statusBadge(item.status)}</div>
         <div class="action-btns">
           <button class="btn btn-sm btn-outline-brand" data-q-edit="${item.id}">Edit</button>
@@ -605,6 +630,10 @@ const App = (() => {
       options,
       correctAnswer
     };
+    if (!payload.text) {
+      toast('Question text is required', 'error');
+      return;
+    }
     if (id) QMS.questions.update(id, payload);
     else QMS.questions.create(payload);
     bootstrap.Modal.getInstance(document.getElementById('questionModal'))?.hide();
@@ -691,6 +720,10 @@ const App = (() => {
       status: document.getElementById('cfStatus').value,
       createdAt: id ? QMS.categories.get(id)?.createdAt || new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
     };
+    if (!payload.name) {
+      toast('Category name is required', 'error');
+      return;
+    }
     if (id) QMS.categories.update(id, payload);
     else QMS.categories.create(payload);
     bootstrap.Modal.getInstance(document.getElementById('categoryModal'))?.hide();
@@ -758,6 +791,7 @@ const App = (() => {
               <h4>${esc(p.name)}</h4>
               <div class="mobile-meta">${esc(p.email)} · Avg ${st.avg}% · ${statusBadge(p.status)}</div>
               <div class="action-btns">
+                <button class="btn btn-sm btn-outline-secondary" data-part-view="${p.id}">View Profile</button>
                 <button class="btn btn-sm btn-outline-brand" data-part-edit="${p.id}">Edit</button>
                 <button class="btn btn-sm btn-outline-info" data-part-attempts="${p.id}">View Attempts</button>
                 <button class="btn btn-sm btn-outline-danger" data-part-del="${p.id}">Delete</button>
@@ -795,6 +829,10 @@ const App = (() => {
       status: document.getElementById('pfStatus').value,
       registeredAt: id ? QMS.participants.get(id)?.registeredAt || new Date().toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10)
     };
+    if (!payload.name || !payload.email || !payload.phone) {
+      toast('Name, email and phone are required', 'error');
+      return;
+    }
     if (id) QMS.participants.update(id, payload);
     else QMS.participants.create(payload);
     bootstrap.Modal.getInstance(document.getElementById('participantModal'))?.hide();
@@ -871,6 +909,7 @@ const App = (() => {
             <div class="mobile-meta">${esc(QMS.quizTitle(r.quizId))} · ${r.percentage}% · ${statusBadge(r.status)}</div>
             <div class="action-btns">
               <a class="btn btn-sm btn-outline-brand" href="quiz.html?result=${encodeURIComponent(r.id)}">View Result</a>
+              <button class="btn btn-sm btn-outline-secondary" onclick="window.open('quiz.html?result=${encodeURIComponent(r.id)}')">Print</button>
               <button class="btn btn-sm btn-outline-danger" data-res-del="${r.id}">Delete</button>
             </div>
           </div>`
@@ -881,8 +920,8 @@ const App = (() => {
 
   /* ---------- Attempts launcher ---------- */
   function renderAttempts() {
-    document.getElementById('attemptQuiz').innerHTML = optionQuizzes();
-    document.getElementById('attemptParticipant').innerHTML = optionParticipants();
+    document.getElementById('attemptQuiz').innerHTML = optionQuizzes('', true);
+    document.getElementById('attemptParticipant').innerHTML = optionParticipants('', true);
     const recent = [...QMS.results.all()].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
     document.getElementById('attemptsTableBody').innerHTML =
       recent
@@ -1007,20 +1046,20 @@ const App = (() => {
     }
     const hits = [];
     QMS.quizzes.all().forEach((x) => {
-      if (x.title.toLowerCase().includes(q)) hits.push({ type: 'Quiz', label: x.title, page: 'quizzes' });
+      if (`${x.id} ${x.title} ${x.subject}`.toLowerCase().includes(q)) hits.push({ type: 'Quiz', label: x.title, page: 'quizzes' });
     });
     QMS.questions.all().forEach((x) => {
-      if (x.text.toLowerCase().includes(q)) hits.push({ type: 'Question', label: x.text.slice(0, 70), page: 'questions' });
+      if (`${x.id} ${x.text}`.toLowerCase().includes(q)) hits.push({ type: 'Question', label: x.text.slice(0, 70), page: 'questions' });
     });
     QMS.participants.all().forEach((x) => {
-      if (`${x.name} ${x.email}`.toLowerCase().includes(q)) hits.push({ type: 'Participant', label: x.name, page: 'participants' });
+      if (`${x.id} ${x.name} ${x.email} ${x.phone}`.toLowerCase().includes(q)) hits.push({ type: 'Participant', label: x.name, page: 'participants' });
     });
     QMS.categories.all().forEach((x) => {
-      if (x.name.toLowerCase().includes(q)) hits.push({ type: 'Category', label: x.name, page: 'categories' });
+      if (`${x.id} ${x.name} ${x.description}`.toLowerCase().includes(q)) hits.push({ type: 'Category', label: x.name, page: 'categories' });
     });
     QMS.results.all().forEach((x) => {
       const label = `${QMS.participantName(x.participantId)} — ${QMS.quizTitle(x.quizId)}`;
-      if (label.toLowerCase().includes(q)) hits.push({ type: 'Result', label, page: 'results' });
+      if (`${x.id} ${label}`.toLowerCase().includes(q)) hits.push({ type: 'Result', label, page: 'results' });
     });
     box.innerHTML = hits.slice(0, 12)
       .map((h) => `<button class="dropdown-item" data-goto-page="${h.page}"><strong>${esc(h.type)}:</strong> ${esc(h.label)}</button>`)
@@ -1281,6 +1320,7 @@ const App = (() => {
     document.getElementById('btnClearNotifs')?.addEventListener('click', (e) => {
       e.stopPropagation();
       notifications = notifications.map((n) => ({ ...n, read: true }));
+      localStorage.setItem('qms_notification_reads', JSON.stringify(notifications.map((n) => n.id)));
       renderNotifications();
       toast('All notifications marked as read', 'success');
     });
@@ -1309,9 +1349,9 @@ const App = (() => {
 
     document.getElementById('btnSaveSettings')?.addEventListener('click', saveSettings);
     document.getElementById('btnResetData')?.addEventListener('click', () => {
-      if (confirm('Reset all demo data? This cannot be undone.')) {
-        QMS.resetDemoData();
-        toast('Demo data reset', 'warning');
+      if (confirm('Reset all project data to zero? This cannot be undone.')) {
+        QMS.resetAllData();
+        toast('All project data reset to zero', 'warning');
         showPage(currentPage);
       }
     });
@@ -1329,6 +1369,7 @@ const App = (() => {
   function init() {
     QMS.seedIfNeeded();
     if (!requireAuth()) return;
+    applyAccessibilityLabels();
     applySettingsUI();
     updateClock();
     setInterval(updateClock, 1000);

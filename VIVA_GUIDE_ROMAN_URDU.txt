@@ -1,0 +1,298 @@
+QUIZPRO ADMIN - COMPLETE PROJECT FLOW
+VIVA GUIDE - ROMAN URDU
+
+1. PROJECT KA MAQSAD
+
+QuizPro Admin aik frontend-based Quiz Management System hai. Is ka maqsad admin ko quizzes, questions, categories, participants, attempts, results, reports aur leaderboard manage karne ki sahulat dena hai.
+
+Yeh project browser mein chalne wali admin dashboard application hai. Is mein abhi backend server, database ya real online authentication shamil nahi hai.
+
+2. TECHNOLOGIES
+
+- HTML5: pages aur application structure ke liye.
+- CSS3: custom responsive styling ke liye.
+- JavaScript ES6+: application logic, CRUD, routing aur quiz engine ke liye.
+- Bootstrap 5: layout aur responsive utility classes ke liye.
+- Font Awesome: icons ke liye.
+- Chart.js: dashboard aur reports ke charts ke liye.
+- LocalStorage: persistent demo data aur settings save karne ke liye.
+- SessionStorage: login session aur active quiz attempt ke temporary data ke liye.
+- Node.js npx http-server: local static hosting ke liye.
+
+3. PROJECT FILE STRUCTURE
+
+Root folder authoritative project hai:
+
+- index.html: authenticated admin dashboard aur tamam dashboard pages.
+- login.html: admin login page.
+- register.html: new local demo user registration page.
+- quiz.html: quiz attempt aur result review page.
+- css/style.css: application ki complete styling.
+- js/storage.js: LocalStorage data layer, authentication, seed data, reset aur grading helpers.
+- js/app.js: dashboard shell, navigation, CRUD forms, settings, notifications aur page rendering.
+- js/dashboard.js: summary cards aur dashboard charts.
+- js/quiz.js: quiz start, timer, navigation, answer saving aur submission.
+- js/reports.js: filters, reports, charts, CSV export aur print report.
+- assets/: images, icons aur bundled vendor libraries.
+- README.md: project overview aur quick start.
+- VIVA_GUIDE_ROMAN_URDU.txt: yeh complete viva aur project flow document.
+
+`uniProject/` root project ki synchronized copy hai. Dono copies ke changed files ko same rakha jata hai.
+
+4. APPLICATION START FLOW
+
+1. Browser `index.html` open karta hai.
+2. `js/storage.js` load hoti hai.
+3. QMS object LocalStorage data layer initialize karta hai.
+4. `QMS.seedIfNeeded()` check karta hai ke demo data pehle se maujood hai ya nahi.
+5. Agar user logged in nahi hai to `app.js` user ko `login.html` par redirect karta hai.
+6. Successful login ke baad user dashboard par aata hai.
+7. Dashboard current LocalStorage data se cards, tables aur charts render karta hai.
+
+5. LOGIN FLOW
+
+Demo account:
+- Email: admin@quizpro.local
+- Password: admin123
+
+Login process:
+
+1. User email aur password enter karta hai.
+2. Email normalize aur validate hoti hai.
+3. Password ka demo hash generate hota hai.
+4. LocalStorage ke `qms_users` data se user match hota hai.
+5. Galat login par failed-attempt counter update hota hai.
+6. 5 failed attempts ke baad short lockout lagta hai.
+7. Sahi login par session token, user email, name aur expiry save hoti hai.
+8. Remember Me select ho to session LocalStorage mein, warna SessionStorage mein save hota hai.
+9. Logout session aur active quiz state clear karta hai.
+
+Important: Yeh frontend-only demo authentication hai. Password aur session real backend security provide nahi karte.
+
+6. DASHBOARD FLOW
+
+Dashboard par yeh summary values show hoti hain:
+
+- Total Quizzes
+- Active Quizzes
+- Total Questions
+- Total Participants
+- Total Attempts
+- Completed Quizzes
+- Average Score
+- Pass Rate
+
+Dashboard data `QMS.quizzes`, `QMS.questions`, `QMS.participants` aur `QMS.results` collections se calculate hota hai.
+
+Charts:
+- Quiz performance bar chart.
+- Participant activity line chart.
+- Category performance doughnut chart.
+- Recent attempts table ya mobile cards.
+
+7. QUIZ MANAGEMENT FLOW
+
+Admin quiz create, view, edit, duplicate, activate, deactivate aur delete kar sakta hai.
+
+Quiz ke important fields:
+- Title aur description.
+- Category aur subject.
+- Difficulty.
+- Duration.
+- Passing percentage.
+- Maximum attempts.
+- Start aur end date.
+- Questions.
+- Timer, random questions, random answers.
+- Retake aur correct answers settings.
+- Negative marking.
+
+Quiz delete hone par us quiz ke related results bhi remove ho jate hain.
+
+8. QUESTION BANK FLOW
+
+Admin question bank mein questions create, edit aur delete kar sakta hai.
+
+Supported question types:
+- MCQ.
+- True/False.
+- Short answer.
+- Fill in the blank.
+
+Har question mein text, category, difficulty, marks, explanation, options aur correct answer store hota hai.
+
+Question delete hone par related quizzes se us question ki ID remove aur question count update hota hai.
+
+9. CATEGORIES AUR PARTICIPANTS
+
+Categories:
+- Category name, description aur status manage hota hai.
+- Category delete karne par related questions aur quizzes ka category reference blank ho jata hai.
+
+Participants:
+- Name, email, phone, status aur registration date manage hoti hai.
+- Inactive participant quiz start nahi kar sakta.
+- Participant delete hone par us ke results remove ho jate hain.
+
+10. QUIZ ATTEMPT FLOW
+
+1. Admin active quiz aur active participant select karta hai.
+2. System quiz status, participant status, dates aur attempt limits validate karta hai.
+3. Quiz ke question IDs se questions load hote hain.
+4. Randomization settings ke mutabiq questions ya options shuffle ho sakte hain.
+5. Active attempt SessionStorage mein save hota hai.
+6. Timer `startedAt` aur `endsAt` values se calculate hota hai.
+7. User next, previous, direct question navigation aur mark for review use kar sakta hai.
+8. Har answer temporary attempt state mein save hota hai.
+9. Submit par answers grade hote hain.
+10. Result LocalStorage ke `qms_results` mein save hota hai.
+11. Active attempt clear hota hai aur result review page open hota hai.
+
+11. RESULT AUR GRADING FLOW
+
+Grading mein yeh values calculate hoti hain:
+
+- Correct answers.
+- Incorrect answers.
+- Unanswered questions.
+- Obtained marks.
+- Total marks.
+- Percentage.
+- Passed ya Failed status.
+- Time taken.
+- Question-wise breakdown.
+
+Percentage ka formula:
+
+percentage = round((obtained marks / total marks) * 100)
+
+Agar percentage passing percentage ke barabar ya zyada ho to result Passed hota hai, warna Failed.
+
+Negative marking enabled ho to incorrect answer par marks reduce hote hain, lekin obtained marks zero se neeche nahi jate.
+
+12. REPORTS AUR ANALYTICS
+
+Reports page filters provide karta hai:
+- Date range.
+- Quiz.
+- Category.
+- Participant.
+
+Reports:
+- Quiz performance.
+- Participant performance.
+- Category performance.
+- Result summary.
+- Leaderboard.
+- Question analysis.
+
+Reports ko CSV mein export ya browser print dialog se print kiya ja sakta hai.
+
+13. LEADERBOARD FLOW
+
+Leaderboard participant results se total points, average score, highest score, attempts aur total quizzes calculate karta hai.
+
+Ranking pehle total points, phir average score ke basis par hoti hai.
+
+14. SETTINGS FLOW
+
+Settings mein yeh options hain:
+- System name.
+- Admin name.
+- Email.
+- Default quiz duration.
+- Default passing percentage.
+- Timer enable/disable.
+- Random questions.
+- Random answers.
+- Retakes.
+- Correct answers visibility.
+- Light/dark theme.
+- Compact sidebar.
+- Font size.
+
+Settings LocalStorage mein save hoti hain aur dashboard UI par apply hoti hain.
+
+15. RESET ALL DATA TO ZERO
+
+Settings page ka `Reset All Data to Zero` button yeh kaam karta hai:
+
+- Quizzes ko empty array karta hai.
+- Questions ko empty array karta hai.
+- Categories ko empty array karta hai.
+- Participants ko empty array karta hai.
+- Results aur attempts ko empty array karta hai.
+- Notifications read state clear karta hai.
+- Login-attempt counter zero karta hai.
+- Active quiz aur last-result temporary state clear karta hai.
+- Valid default settings restore karta hai.
+- Demo admin account preserve karta hai.
+- `qms_empty_v1` marker set karta hai taa-ke application dobara demo data auto-seed na kare.
+
+Is reset ke baad dashboard ke tamam data metrics zero show karte hain. Admin login phir bhi available rehta hai.
+
+Demo data wapas lane ke liye browser ka project LocalStorage clear karna hoga ya seed routine ko dobara invoke karna hoga.
+
+16. DATA KEYS
+
+Main LocalStorage keys:
+- qms_categories
+- qms_questions
+- qms_quizzes
+- qms_participants
+- qms_results
+- qms_settings
+- qms_users
+- qms_seeded_v3
+- qms_empty_v1
+- qms_login_attempts
+- qms_session_v3
+
+Main SessionStorage keys:
+- qms_session_v3
+- qms_active_attempt
+- qms_last_result
+
+17. LOCALHOST PAR RUN KARNA
+
+Windows PowerShell mein:
+
+1. Project folder open karein:
+   cd D:\AL
+
+2. Node static server start karein:
+   npx --yes http-server . -p 5500
+
+3. Browser mein open karein:
+   http://127.0.0.1:5500/login.html?v=3
+
+4. Login credentials use karein:
+   admin@quizpro.local / admin123
+
+Server band karne ke liye terminal mein Ctrl+C press karein.
+
+18. CURRENT DELIVERY STATUS
+
+Demo/local delivery ke liye project ready hai:
+- Pages load ho rahe hain.
+- Login flow working hai.
+- Reset-to-zero flow working hai.
+- Zero state reload ke baad persist karti hai.
+- Root aur `uniProject` copies synchronized hain.
+- JavaScript syntax checks pass hain.
+
+Production delivery ke liye project abhi ready nahi hai kyun ke:
+- Backend nahi hai.
+- Real database nahi hai.
+- Authentication browser-side demo implementation hai.
+- LocalStorage user data ko secure nahi rakhta.
+- Multi-user synchronization nahi hai.
+- Server-side validation aur authorization nahi hai.
+
+19. VIVA MEIN SHORT EXPLANATION
+
+"Yeh QuizPro Admin aik responsive frontend Quiz Management System hai jo HTML, CSS, JavaScript, Bootstrap, Font Awesome, Chart.js aur LocalStorage par based hai. Admin login ke baad dashboard se quizzes, questions, categories, participants, attempts, results, reports aur leaderboard manage karta hai. Quiz attempt ke waqt timer aur navigation available hain, submit par answers grade hote hain aur result save hota hai. Kyun ke yeh frontend-only project hai, is liye authentication aur data persistence demo purpose ke liye browser storage par depend karte hain, production security ke liye backend aur database required honge."
+
+20. MAINTENANCE NOTE
+
+Jab bhi project mein functionality, workflow, technology, API, deployment ya limitation change ho, is file ko update karna zaroori hai. Root aur `uniProject` copy mein is file ka content same rehna chahiye.

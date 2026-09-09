@@ -17,7 +17,7 @@ const Dashboard = (() => {
     const participants = QMS.participants.all();
     const results = QMS.results.all();
     const activeQuizzes = quizzes.filter((q) => q.status === 'Active').length;
-    const completed = results.filter((r) => r.status === 'Passed' || r.status === 'Failed').length;
+    const completed = new Set(results.filter((r) => r.status === 'Passed' || r.status === 'Failed').map((r) => r.quizId)).size;
     const avgScore = results.length
       ? Math.round(results.reduce((s, r) => s + Number(r.percentage || 0), 0) / results.length)
       : 0;
@@ -106,7 +106,7 @@ const Dashboard = (() => {
     results.forEach((r) => {
       const d = new Date(r.date);
       if (Number.isNaN(d.getTime())) return;
-      const day = d.toLocaleDateString(undefined, { weekday: 'short' });
+      const day = new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(d);
       byDay[day] = (byDay[day] || 0) + 1;
       const week = `W${Math.min(4, Math.ceil(d.getDate() / 7))}`;
       byWeek[week] = (byWeek[week] || 0) + 1;
@@ -116,7 +116,10 @@ const Dashboard = (() => {
 
     const actCanvas = document.getElementById('chartParticipantActivity');
     if (actCanvas) {
-      const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const dayLabels = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(2021, 7, 2 + index);
+        return new Intl.DateTimeFormat(undefined, { weekday: 'short' }).format(date);
+      });
       charts.push(
         new Chart(actCanvas, {
           type: 'line',
@@ -159,9 +162,9 @@ const Dashboard = (() => {
       );
     }
 
-    const cats = ['Programming', 'Mathematics', 'Science', 'English', 'General Knowledge', 'Computer Science'];
-    const catScores = cats.map((name) => {
-      const cat = QMS.categories.all().find((c) => c.name === name);
+    const categories = QMS.categories.all();
+    const cats = categories.map((category) => category.name);
+    const catScores = categories.map((cat) => {
       if (!cat) return 0;
       const quizIds = QMS.quizzes.all().filter((q) => q.categoryId === cat.id).map((q) => q.id);
       const rows = results.filter((r) => quizIds.includes(r.quizId));

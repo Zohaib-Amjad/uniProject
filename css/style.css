@@ -1,6 +1,4 @@
 /* QuizPro Admin — Design System */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-
 :root {
   --bg: #f3f5f8;
   --surface: #ffffff;
@@ -88,8 +86,8 @@ img { max-width: 100%; }
 }
 .brand-mark {
   width: 40px; height: 40px; border-radius: 10px;
-  background: linear-gradient(135deg, #2bb892, #7ad9bf);
   display: grid; place-items: center; font-weight: 700; color: #083328;
+  flex: 0 0 auto;
 }
 .brand-text { font-weight: 700; letter-spacing: .2px; }
 .brand-text small { display: block; font-weight: 500; opacity: .75; font-size: .75rem; }
@@ -247,6 +245,7 @@ th.sortable::after { content: ' ↕'; opacity: .35; font-size: .75em; }
   margin: 0; font-size: 1.55rem; letter-spacing: -.02em;
 }
 .page-header p { margin: .25rem 0 0; color: var(--muted); }
+.question-id { color: var(--primary); font-size: .78em; font-weight: 700; letter-spacing: .04em; }
 
 .stat-grid {
   display: grid;
