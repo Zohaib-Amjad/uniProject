@@ -39,8 +39,33 @@ const QuizEngine = (() => {
       alert('Invalid quiz or participant.');
       return false;
     }
+    if (participant.status !== 'Active') {
+      alert('This participant is inactive.');
+      return false;
+    }
     if (quiz.status !== 'Active') {
       alert('This quiz is not active.');
+      return false;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (quiz.startDate && new Date(`${quiz.startDate}T00:00:00`) > today) {
+      alert(`This quiz opens on ${quiz.startDate}.`);
+      return false;
+    }
+    if (quiz.endDate && new Date(`${quiz.endDate}T23:59:59`) < today) {
+      alert('This quiz is no longer available.');
+      return false;
+    }
+    const previousAttempts = QMS.results
+      .all()
+      .filter((result) => result.quizId === quizId && result.participantId === participantId).length;
+    if (quiz.allowRetake === false && previousAttempts > 0) {
+      alert('Retakes are not allowed for this quiz.');
+      return false;
+    }
+    if (quiz.maxAttempts && previousAttempts >= Number(quiz.maxAttempts)) {
+      alert('You have reached the maximum attempts for this quiz.');
       return false;
     }
 
@@ -80,6 +105,7 @@ const QuizEngine = (() => {
       index: 0,
       startedAt: Date.now(),
       endsAt: Date.now() + durationMin * 60 * 1000,
+      timerEnabled: QMS.getSettings().enableTimer !== false,
       displayTimer: quiz.displayTimer !== false && QMS.getSettings().enableTimer !== false
     };
     saveState(state);
@@ -162,13 +188,13 @@ const QuizEngine = (() => {
         optionsHTML = `<div class="option-list">${Object.entries(q.options || {})
           .map(
             ([k, v]) => `<label class="option-item ${st.answers[q.id] === k ? 'selected' : ''}">
-            <input type="radio" name="ans" value="${k}" ${st.answers[q.id] === k ? 'checked' : ''} hidden>
-            <strong>${k}.</strong> ${v}
+            <input class="visually-hidden" type="radio" name="ans" value="${QMS.escapeHtml(k)}" aria-label="Option ${QMS.escapeHtml(k)}" ${st.answers[q.id] === k ? 'checked' : ''}>
+            <strong>${QMS.escapeHtml(k)}.</strong> ${QMS.escapeHtml(v)}
           </label>`
           )
           .join('')}</div>`;
       } else {
-        optionsHTML = `<input class="form-control" id="textAnswer" placeholder="Type your answer" value="${st.answers[q.id] || ''}">`;
+        optionsHTML = `<label class="form-label" for="textAnswer">Your answer</label><input class="form-control" id="textAnswer" aria-label="Your answer" placeholder="Type your answer" value="${QMS.escapeHtml(st.answers[q.id] || '')}">`;
       }
 
       const nav = st.questions
@@ -189,8 +215,8 @@ const QuizEngine = (() => {
         <div class="quiz-layout">
           <div class="quiz-top">
             <div>
-              <h1 style="margin:0 0 .25rem">${quiz.title}</h1>
-              <div class="text-muted">Participant: ${participant.name}</div>
+              <h1 style="margin:0 0 .25rem">${QMS.escapeHtml(quiz.title)}</h1>
+              <div class="text-muted">Participant: ${QMS.escapeHtml(participant.name)}</div>
               <div class="text-muted">Question ${st.index + 1} of ${total}</div>
             </div>
             <div class="timer ${st.displayTimer ? '' : 'd-none'}" id="quizTimer">--:--</div>
@@ -198,8 +224,8 @@ const QuizEngine = (() => {
           <div class="progress mb-3"><div class="progress-bar" style="width:${progress}%"></div></div>
           <div class="panel">
             <div class="panel-body">
-              <h2 style="font-size:1.15rem;margin-top:0">${q.text}</h2>
-              <div class="text-muted mb-3">${q.type.toUpperCase()} · ${q.marks} mark(s) · ${q.difficulty}</div>
+              <h2 style="font-size:1.15rem;margin-top:0">${QMS.escapeHtml(q.text)}</h2>
+              <div class="text-muted mb-3">${QMS.escapeHtml(q.type.toUpperCase())} · ${QMS.escapeHtml(q.marks)} mark(s) · ${QMS.escapeHtml(q.difficulty)}</div>
               ${optionsHTML}
               <div class="q-nav">${nav}</div>
               <div class="d-flex flex-wrap gap-2 mt-3">
@@ -267,10 +293,12 @@ const QuizEngine = (() => {
       const st = loadState();
       if (!st) return;
       const el = document.getElementById('quizTimer');
-      if (!el || !st.displayTimer) return;
+      if (st.timerEnabled === false) return;
       const left = Math.max(0, Math.floor((st.endsAt - Date.now()) / 1000));
-      el.textContent = formatTime(left);
-      el.classList.toggle('low', left <= 60);
+      if (el) {
+        el.textContent = formatTime(left);
+        el.classList.toggle('low', left <= 60);
+      }
       if (left <= 0) submit(true);
     };
 
@@ -289,6 +317,21 @@ const QuizEngine = (() => {
     }
     const quiz = QMS.quizzes.get(result.quizId);
     const participant = QMS.participants.get(result.participantId);
+    const showCorrectAnswers = quiz?.showCorrectAnswers !== false;
+    const previousAttempts = QMS.results
+      .all()
+      .filter((item) => item.quizId === result.quizId && item.participantId === result.participantId).length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const withinWindow =
+      quiz &&
+      quiz.status === 'Active' &&
+      (!quiz.startDate || new Date(`${quiz.startDate}T00:00:00`) <= today) &&
+      (!quiz.endDate || new Date(`${quiz.endDate}T23:59:59`) >= today);
+    const canRetake =
+      withinWindow &&
+      quiz.allowRetake !== false &&
+      (!quiz.maxAttempts || previousAttempts < Number(quiz.maxAttempts));
     const mins = Math.floor((result.timeTaken || 0) / 60);
     const secs = (result.timeTaken || 0) % 60;
     const breakdown = result.breakdown || [];
@@ -314,7 +357,7 @@ const QuizEngine = (() => {
             </div>
             <div class="d-flex flex-wrap gap-2 justify-content-center mt-4">
               <button class="btn btn-outline-brand" id="btnReviewAnswers">Review Answers</button>
-              <a class="btn btn-outline-secondary" href="quiz.html?retake=${result.quizId}&participant=${result.participantId}">Retake Quiz</a>
+              ${canRetake ? `<a class="btn btn-outline-secondary" href="quiz.html?retake=${result.quizId}&participant=${result.participantId}">Retake Quiz</a>` : ''}
               <button class="btn btn-outline-secondary" onclick="window.print()">Print Result</button>
               <a class="btn btn-brand text-white" href="index.html#dashboard">Back to Dashboard</a>
             </div>
@@ -331,9 +374,9 @@ const QuizEngine = (() => {
                     const cls =
                       b.result === 'correct' ? 'badge-success' : b.result === 'incorrect' ? 'badge-danger' : 'badge-muted';
                     return `<tr>
-                      <td>${b.question}</td>
-                      <td>${b.selectedAnswer}</td>
-                      <td>${b.correctAnswer}</td>
+                      <td>${QMS.escapeHtml(b.question)}</td>
+                      <td>${QMS.escapeHtml(b.selectedAnswer)}</td>
+                      <td>${showCorrectAnswers ? QMS.escapeHtml(b.correctAnswer) : 'Hidden'}</td>
                       <td><span class="badge-soft ${cls}">${b.result}</span></td>
                     </tr>`;
                   })

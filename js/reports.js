@@ -92,7 +92,7 @@ const Reports = (() => {
     return `<div class="table-wrap"><table class="data-table"><thead><tr>${headers
       .map((h) => `<th>${h}</th>`)
       .join('')}</tr></thead><tbody>${rows
-      .map((r) => `<tr>${headers.map((h) => `<td>${r[h]}</td>`).join('')}</tr>`)
+      .map((r) => `<tr>${headers.map((h) => `<td>${QMS.escapeHtml(r[h])}</td>`).join('')}</tr>`)
       .join('')}</tbody></table></div>`;
   }
 
@@ -187,17 +187,17 @@ const Reports = (() => {
     if (quizSel) {
       quizSel.innerHTML =
         '<option value="">All Quizzes</option>' +
-        QMS.quizzes.all().map((q) => `<option value="${q.id}">${q.title}</option>`).join('');
+        QMS.quizzes.all().map((q) => `<option value="${q.id}">${QMS.escapeHtml(q.title)}</option>`).join('');
     }
     if (catSel) {
       catSel.innerHTML =
         '<option value="">All Categories</option>' +
-        QMS.categories.all().map((c) => `<option value="${c.id}">${c.name}</option>`).join('');
+        QMS.categories.all().map((c) => `<option value="${c.id}">${QMS.escapeHtml(c.name)}</option>`).join('');
     }
     if (partSel) {
       partSel.innerHTML =
         '<option value="">All Participants</option>' +
-        QMS.participants.all().map((p) => `<option value="${p.id}">${p.name}</option>`).join('');
+        QMS.participants.all().map((p) => `<option value="${p.id}">${QMS.escapeHtml(p.name)}</option>`).join('');
     }
   }
 
@@ -268,11 +268,11 @@ const Reports = (() => {
   }
 
   function rowsToHtmlTable(title, rows) {
-    if (!rows.length) return `<h2>${title}</h2><p>No data</p>`;
+    if (!rows.length) return `<h2>${QMS.escapeHtml(title)}</h2><p>No data</p>`;
     const headers = Object.keys(rows[0]);
-    return `<h2>${title}</h2><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;margin-bottom:24px">
+    return `<h2>${QMS.escapeHtml(title)}</h2><table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;margin-bottom:24px">
       <thead><tr>${headers.map((h) => `<th>${h}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map((r) => `<tr>${headers.map((h) => `<td>${r[h]}</td>`).join('')}</tr>`).join('')}</tbody>
+      <tbody>${rows.map((r) => `<tr>${headers.map((h) => `<td>${QMS.escapeHtml(r[h])}</td>`).join('')}</tr>`).join('')}</tbody>
     </table>`;
   }
 
@@ -284,7 +284,7 @@ const Reports = (() => {
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${settings.systemName || 'QuizPro'} Report</title>
       <style>body{font-family:Arial,sans-serif;padding:24px;color:#152033}h1{margin-bottom:4px}h2{margin-top:28px;color:#0f6e56}table{font-size:13px}th{background:#eef2f7;text-align:left}</style>
       </head><body>
-      <h1>${settings.systemName || 'QuizPro Admin'} — Full Report Pack</h1>
+      <h1>${QMS.escapeHtml(settings.systemName || 'QuizPro Admin')} — Full Report Pack</h1>
       <p>Generated: ${new Date().toLocaleString()}</p>
       ${rowsToHtmlTable('Quiz Performance Report', lastQuizRows)}
       ${rowsToHtmlTable('Participant Performance Report', lastPartRows)}

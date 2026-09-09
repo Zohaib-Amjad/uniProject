@@ -2,7 +2,9 @@
 
 A complete, responsive Quiz Management admin dashboard built with **HTML5, CSS3, Vanilla JavaScript (ES6+), Bootstrap 5, Font Awesome, Chart.js**, and **LocalStorage**.
 
-No backend or build step is required. Open `index.html` in a browser.
+No backend or build step is required. Open `index.html` in a browser, or serve the folder with any static file server.
+
+All runtime libraries are bundled under `assets/vendor`, so the application does not require internet access after the files are downloaded.
 
 ## Quick Start
 
@@ -27,7 +29,7 @@ No backend or build step is required. Open `index.html` in a browser.
 - Leaderboard with top-3 highlight
 - Settings with light/dark mode (LocalStorage)
 - Frontend-only login/register simulation
-- Seeded demo data (8 quizzes, 30+ questions, 6 categories, 10 participants, 15 attempts)
+- Seeded demo data (9 quizzes, 30+ questions, 6 categories, 10 participants, 15 attempts)
 
 ## File Structure
 
@@ -53,6 +55,8 @@ Quiz-Management-System/
 ## Notes
 
 - Persistence uses browser LocalStorage.
-- Use **Settings → Reset Demo Data** to restore sample records.
+- Use **Settings → Reset All Data to Zero** to clear all runtime records while preserving the demo admin login.
+- The reset state persists in LocalStorage and prevents automatic demo reseeding until the browser data is cleared or the seed routine is restored.
 - CSV export and print are implemented with JavaScript / browser print.
 - This project is a frontend demonstration only — not real authentication/security.
+- The root folder is the authoritative project. `uniProject/` is a synchronized copy for convenience.
