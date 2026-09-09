@@ -12,6 +12,7 @@ const QMS = (() => {
     session: 'qms_session_v3',
     users: 'qms_users',
     seeded: 'qms_seeded_v3',
+    empty: 'qms_empty_v1',
     loginAttempts: 'qms_login_attempts'
   };
 
@@ -49,6 +50,23 @@ const QMS = (() => {
     return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function nextQuestionId(list) {
+    const highest = list.reduce((max, question) => {
+      const match = /^q(\d+)$/i.exec(String(question.id || ''));
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0);
+    return `q${highest + 1}`;
+  }
+
   function collection(key) {
     return {
       all() {
@@ -62,7 +80,8 @@ const QMS = (() => {
       },
       create(item) {
         const list = this.all();
-        const row = { id: item.id || uid(key.slice(0, 3)), ...item };
+        const generatedId = key === 'questions' ? nextQuestionId(list) : uid(key.slice(0, 3));
+        const row = { id: item.id || generatedId, ...item };
         list.push(row);
         this.save(list);
         return row;
@@ -78,6 +97,22 @@ const QMS = (() => {
       remove(id) {
         const list = this.all().filter((x) => x.id !== id);
         this.save(list);
+        if (key === 'questions') {
+          quizzes.save(
+            quizzes.all().map((quiz) => {
+              const questionIds = (quiz.questionIds || []).filter((questionId) => questionId !== id);
+              return { ...quiz, questionIds, questionCount: questionIds.length };
+            })
+          );
+        }
+          sessionStorage.removeItem('qms_active_attempt');
+          sessionStorage.removeItem('qms_last_result');
+        if (key === 'categories') {
+          questions.save(questions.all().map((question) => question.categoryId === id ? { ...question, categoryId: '' } : question));
+          quizzes.save(quizzes.all().map((quiz) => quiz.categoryId === id ? { ...quiz, categoryId: '' } : quiz));
+        }
+        if (key === 'quizzes') results.save(results.all().filter((result) => result.quizId !== id));
+        if (key === 'participants') results.save(results.all().filter((result) => result.participantId !== id));
         return true;
       }
     };
@@ -251,16 +286,17 @@ const QMS = (() => {
     write(KEYS.users, users);
   }
 
-  function requireAuthRedirect(loginPage = 'login.html') {
+  function requireAuthRedirect(loginPage = 'login.html?v=3') {
     if (!isAuthenticated()) {
       const next = encodeURIComponent(location.pathname.split('/').pop() + location.search + location.hash);
-      location.replace(`${loginPage}?next=${next}`);
+      location.replace(`${loginPage}${loginPage.includes('?') ? '&' : '?'}next=${next}`);
       return false;
     }
     return true;
   }
 
   function seedIfNeeded() {
+    if (localStorage.getItem(KEYS.empty) === '1') return;
     if (localStorage.getItem(KEYS.seeded) === '1' && categories.all().length) return;
 
     const cats = [
@@ -373,6 +409,7 @@ const QMS = (() => {
       }
     ]);
     clearSessionStores();
+    localStorage.removeItem(KEYS.empty);
     localStorage.setItem(KEYS.seeded, '1');
   }
 
@@ -406,7 +443,7 @@ const QMS = (() => {
     if (question.type === 'mcq' || question.type === 'truefalse') {
       return sel === correct || sel === normalizeAnswer((question.options || {})[question.correctAnswer]);
     }
-    return sel === correct || correct.includes(sel) || sel.includes(correct);
+    return sel === correct;
   }
 
   function gradeAttempt({ quiz, questionList, answers, timeTaken }) {
@@ -475,6 +512,25 @@ const QMS = (() => {
     seedIfNeeded();
   }
 
+  function resetAllData() {
+    [KEYS.categories, KEYS.questions, KEYS.quizzes, KEYS.participants, KEYS.results].forEach((key) => localStorage.setItem(key, '[]'));
+    write(KEYS.settings, defaultSettings());
+    write(KEYS.users, [
+      {
+        id: 'u_admin',
+        fullName: 'System Admin',
+        email: 'admin@quizpro.local',
+        phone: '0300-0000000',
+        passwordHash: hashPassword('admin123')
+      }
+    ]);
+    localStorage.setItem(KEYS.loginAttempts, JSON.stringify({ count: 0, lockedUntil: 0 }));
+    localStorage.removeItem('qms_notification_reads');
+    clearSessionStores();
+    localStorage.removeItem(KEYS.seeded);
+    localStorage.setItem(KEYS.empty, '1');
+  }
+
   return {
     KEYS,
     seedIfNeeded,
@@ -503,7 +559,10 @@ const QMS = (() => {
     isAnswerCorrect,
     exportCSV,
     resetDemoData,
-    uid
+    resetAllData,
+    uid,
+    nextQuestionId,
+    escapeHtml
   };
 })();
 

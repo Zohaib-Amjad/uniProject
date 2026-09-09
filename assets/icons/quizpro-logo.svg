@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">QuizPro</title>
+  <desc id="desc">A quiz card with a check mark</desc>
+  <defs>
+    <linearGradient id="tile" x1="12" y1="10" x2="116" y2="118" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7ad9bf"/>
+      <stop offset="1" stop-color="#2bb892"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="#083328"/>
+  <rect x="15" y="15" width="98" height="98" rx="21" fill="url(#tile)"/>
+  <path d="M37 37h31M37 53h18" fill="none" stroke="#083328" stroke-linecap="round" stroke-width="9"/>
+  <path d="m38 78 13 13 31-34" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="11"/>
+</svg>
