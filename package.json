@@ -4,9 +4,9 @@
   "description": "Quiz Management System - Frontend Admin Dashboard",
   "main": "index.html",
   "scripts": {
-    "start": "serve -l 3000",
-    "dev": "serve -l 3000",
-    "build": "node -e \"console.log('Build successful: static assets validated.')\"",
+    "start": "node init && serve -l 3000",
+    "dev": "node init && serve -l 3000",
+    "build": "node init && node scripts/build.js",
     "test": "node -e \"console.log('All tests passed.')\""
   },
   "dependencies": {},
