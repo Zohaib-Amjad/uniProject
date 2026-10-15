@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/quiz", "destination": "/quiz.html" },
+    { "source": "/register", "destination": "/register.html" }
+  ]
+}
