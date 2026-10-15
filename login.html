@@ -5,117 +5,802 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/quizpro-logo.svg" />
   <link rel="mask-icon" href="assets/icons/quizpro-logo.svg" color="#0f6e56" />
-  <title>Login — QuizPro Admin</title>
+  <title>Sign In & Register — QuizPro Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link href="assets/vendor/bootstrap.min.css" rel="stylesheet" />
   <link href="assets/vendor/all.min.css" rel="stylesheet" />
   <link href="css/style.css" rel="stylesheet" />
-  <script src="js/storage.js?v=3"></script>
+  <script src="js/storage.js?v=4"></script>
   <script>
+    // Immediate pre-paint theme and font size application to prevent white/dark flash
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('qms_settings') || '{}');
+        var t = s.theme || localStorage.getItem('qms_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+        var f = s.fontSize || 'medium';
+        document.documentElement.classList.remove('font-small', 'font-medium', 'font-large');
+        document.documentElement.classList.add('font-' + f);
+        document.documentElement.setAttribute('data-font-size', f);
+        if (s.systemName) {
+          document.title = 'Sign In & Register — ' + s.systemName;
+        }
+      } catch (e) {}
+    })();
+
+    // Initialize seed data
     QMS.seedIfNeeded();
+
+    // If already authenticated, redirect immediately to dashboard or intended next page
     if (QMS.isAuthenticated()) {
       const params = new URLSearchParams(location.search);
-      const next = params.get('next') || 'index.html';
-      location.replace(/^(?:index|quiz|login|register)\.html(?:[?#].*)?$/.test(next) ? next : 'index.html');
+      const next = params.get('next') || 'index.html#/dashboard';
+      location.replace(/^(?:index|quiz|login|register)\.html(?:[?#].*)?$/.test(next) ? next : 'index.html#/dashboard');
     }
-    document.title = `${QMS.getSettings().systemName || 'QuizPro Admin'} — Login`;
   </script>
 </head>
 <body class="auth-body">
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="d-flex align-items-center gap-2 mb-3">
-        <img class="brand-mark" src="assets/icons/quizpro-logo.svg" alt="QuizPro logo" />
-        <strong>QuizPro Admin</strong>
+  <a href="#paneLogin" class="skip-to-content">Skip to content</a>
+  <div class="auth-split-layout">
+    <!-- Left Hero Side (Brand showcase, stats, and highlights) -->
+    <div class="auth-hero-side">
+      <div class="auth-hero-glow"></div>
+      <div class="auth-hero-glow-bottom"></div>
+
+      <div class="auth-hero-header">
+        <div class="auth-brand-badge">
+          <img src="assets/icons/quizpro-logo.svg" alt="QuizPro Logo" />
+          <span data-system-name>QuizPro Admin ERP</span>
+        </div>
+        <h1 class="auth-hero-title">Enterprise Quiz &amp; Examination Management</h1>
+        <p class="auth-hero-subtitle">
+          A high-performance, frontend-only administrative suite for authoring tests, orchestrating timed attempts, tracking real-time leaderboards, and analyzing student performance.
+        </p>
+
+        <div class="auth-features-list">
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <i class="fa-solid fa-list-check"></i>
+            </div>
+            <div class="auth-feature-text">
+              <strong>Comprehensive Quiz Builder</strong>
+              <span>Support for MCQs, True/False, Fill-in-the-Blanks, and Short Answers with passing thresholds.</span>
+            </div>
+          </div>
+
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <i class="fa-solid fa-stopwatch"></i>
+            </div>
+            <div class="auth-feature-text">
+              <strong>Simulated Examination Engine</strong>
+              <span>Countdown timers, auto-submission, instant grading breakdown, and attempt history.</span>
+            </div>
+          </div>
+
+          <div class="auth-feature-item">
+            <div class="auth-feature-icon">
+              <i class="fa-solid fa-chart-pie"></i>
+            </div>
+            <div class="auth-feature-text">
+              <strong>Deep Analytics &amp; Reports</strong>
+              <span>Visual Chart.js trends, category mastery breakdowns, and single-click CSV exports.</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <h1>Sign in</h1>  
-      <p>Enter your email and password to access the dashboard.</p>
-      <form id="loginForm" novalidate autocomplete="on">
-        <div class="mb-3">
-          <label class="form-label" for="email">Email</label>
-          <input class="form-control" type="email" id="email" name="email" required autocomplete="username" placeholder="name@example.com" />
-          <div class="invalid-feedback">Valid email is required</div>
+
+      <div class="auth-stats-bar">
+        <div class="auth-stat-pill">
+          <i class="fa-solid fa-clipboard-question"></i>
+          <span>9+ Active Quizzes</span>
         </div>
-        <div class="mb-3">
-          <label class="form-label" for="password">Password</label>
-          <div class="password-field">
-            <input class="form-control" type="password" id="password" name="password" required autocomplete="current-password" placeholder="Enter password" minlength="6" />
-            <button type="button" class="password-toggle" id="togglePassword" aria-label="Show password"><i class="fa-regular fa-eye"></i></button>
+        <div class="auth-stat-pill">
+          <i class="fa-solid fa-database"></i>
+          <span>45+ Seeded Questions</span>
+        </div>
+        <div class="auth-stat-pill">
+          <i class="fa-solid fa-bolt"></i>
+          <span>100% Client-Side SPA</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Form Side (Login & Registration Tabs) -->
+    <div class="auth-form-side">
+      <div class="auth-topbar-actions">
+        <button type="button" class="auth-theme-btn" id="btnAuthThemeToggle" aria-label="Toggle dark/light theme" title="Toggle dark/light theme">
+          <i class="fa-regular fa-moon" id="authThemeIcon"></i>
+        </button>
+      </div>
+
+      <div class="auth-card">
+        <!-- Segmented Tab Switcher -->
+        <div class="auth-tabs-nav" role="tablist">
+          <button type="button" class="auth-tab-btn active" id="tabBtnLogin" role="tab" aria-selected="true" aria-controls="paneLogin">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Sign In</span>
+          </button>
+          <button type="button" class="auth-tab-btn" id="tabBtnRegister" role="tab" aria-selected="false" aria-controls="paneRegister">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Create Account</span>
+          </button>
+        </div>
+
+        <!-- Visible Demonstration Disclaimer Note (Phase 4 Requirement) -->
+        <div class="auth-notice-disclaimer">
+          <i class="fa-solid fa-circle-info"></i>
+          <div>
+            <strong>Frontend Demonstration Only:</strong> No real authentication or security is implemented. Registered accounts and session flags are stored directly in your browser's LocalStorage.
           </div>
-          <div class="invalid-feedback">Password is required</div>
         </div>
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-          <div class="form-check">
-            <input class="form-check-input" type="checkbox" id="remember" />
-            <label class="form-check-label" for="remember">Remember Me</label>
+
+        <!-- ================= Pane 1: LOGIN FORM ================= -->
+        <div id="paneLogin" role="tabpanel">
+          <h2 class="auth-title">Welcome back</h2>
+          <p class="auth-subtitle">Enter your credentials to access the management dashboard.</p>
+
+          <form id="formLogin" novalidate autocomplete="on">
+            <!-- Email -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="loginEmail">Email Address</label>
+              <div class="input-icon-group">
+                <i class="fa-regular fa-envelope field-icon"></i>
+                <input
+                  class="form-control"
+                  type="email"
+                  id="loginEmail"
+                  name="email"
+                  required
+                  autocomplete="username"
+                  placeholder="name@example.com"
+                />
+              </div>
+              <div class="invalid-feedback" id="loginEmailFeedback">Valid email is required.</div>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label small fw-semibold mb-0" for="loginPassword">Password</label>
+                <button type="button" class="btn btn-link p-0 small text-decoration-none" id="btnForgotPwd" style="font-size:0.82rem">
+                  Forgot Password?
+                </button>
+              </div>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-lock field-icon"></i>
+                <input
+                  class="form-control"
+                  type="password"
+                  id="loginPassword"
+                  name="password"
+                  required
+                  minlength="6"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
+                />
+                <button type="button" class="password-toggle-btn" id="toggleLoginPassword" aria-label="Toggle password visibility">
+                  <i class="fa-regular fa-eye"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" id="loginPasswordFeedback">Password is required.</div>
+            </div>
+
+            <!-- Remember Me -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="loginRemember" checked />
+                <label class="form-check-label small" for="loginRemember">
+                  Remember Me (persist in LocalStorage)
+                </label>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button class="btn btn-brand text-white w-100 py-2 fw-semibold" type="submit" id="btnLoginSubmit">
+              <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Sign In to Dashboard
+            </button>
+
+            <!-- Quick-Fill Demo Credentials Card -->
+            <div class="auth-demo-credentials-card">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-muted fw-semibold" style="font-size:0.78rem">
+                  <i class="fa-solid fa-key me-1 text-primary"></i>Demo Accounts:
+                </span>
+                <span class="badge bg-light text-dark border" style="font-size:0.72rem">Instant Fill</span>
+              </div>
+              <div class="demo-cred-row">
+                <div>
+                  <code>admin@quizpro.local</code> / <code>admin123</code>
+                </div>
+                <button type="button" class="btn-quick-fill" id="btnFillDemo1">Use</button>
+              </div>
+              <div class="demo-cred-row">
+                <div>
+                  <code>admin@quizmaster.com</code> / <code>admin123</code>
+                </div>
+                <button type="button" class="btn-quick-fill" id="btnFillDemo2">Use</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- ================= Pane 2: REGISTRATION FORM ================= -->
+        <div id="paneRegister" class="d-none" role="tabpanel">
+          <h2 class="auth-title">Create your account</h2>
+          <p class="auth-subtitle">Register a demo administrator or examiner profile.</p>
+
+          <form id="formRegister" novalidate autocomplete="on">
+            <!-- Full Name -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="regFullName">Full Name</label>
+              <div class="input-icon-group">
+                <i class="fa-regular fa-user field-icon"></i>
+                <input
+                  class="form-control"
+                  type="text"
+                  id="regFullName"
+                  name="fullName"
+                  required
+                  autocomplete="name"
+                  placeholder="e.g. Dr. Ayesha Siddiqui"
+                />
+              </div>
+              <div class="invalid-feedback" id="regNameFeedback">Full Name is required.</div>
+            </div>
+
+            <!-- Email -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="regEmail">Email Address</label>
+              <div class="input-icon-group">
+                <i class="fa-regular fa-envelope field-icon"></i>
+                <input
+                  class="form-control"
+                  type="email"
+                  id="regEmail"
+                  name="email"
+                  required
+                  autocomplete="email"
+                  placeholder="name@example.com"
+                />
+              </div>
+              <div class="invalid-feedback" id="regEmailFeedback">Valid email address is required.</div>
+            </div>
+
+            <!-- Phone -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="regPhone">Phone Number</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-phone field-icon"></i>
+                <input
+                  class="form-control"
+                  type="tel"
+                  id="regPhone"
+                  name="phone"
+                  required
+                  autocomplete="tel"
+                  placeholder="+92 300 1234567"
+                />
+              </div>
+              <div class="invalid-feedback" id="regPhoneFeedback">Valid phone number is required.</div>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="regPassword">Password</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-lock field-icon"></i>
+                <input
+                  class="form-control"
+                  type="password"
+                  id="regPassword"
+                  name="password"
+                  required
+                  minlength="6"
+                  autocomplete="new-password"
+                  placeholder="Minimum 6 characters"
+                />
+                <button type="button" class="password-toggle-btn" id="toggleRegPassword" aria-label="Toggle password visibility">
+                  <i class="fa-regular fa-eye"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" id="regPasswordFeedback">Password must be at least 6 characters.</div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="mb-3">
+              <label class="form-label small fw-semibold" for="regConfirmPassword">Confirm Password</label>
+              <div class="input-icon-group">
+                <i class="fa-solid fa-shield-halved field-icon"></i>
+                <input
+                  class="form-control"
+                  type="password"
+                  id="regConfirmPassword"
+                  name="confirmPassword"
+                  required
+                  minlength="6"
+                  autocomplete="new-password"
+                  placeholder="Repeat your password"
+                />
+                <button type="button" class="password-toggle-btn" id="toggleRegConfirmPassword" aria-label="Toggle password visibility">
+                  <i class="fa-regular fa-eye"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" id="regConfirmFeedback">Passwords must match.</div>
+            </div>
+
+            <!-- Submit Button -->
+            <button class="btn btn-brand text-white w-100 py-2 fw-semibold mb-2" type="submit" id="btnRegisterSubmit">
+              <i class="fa-solid fa-user-check me-2"></i>Create Account &amp; Continue
+            </button>
+
+            <div class="text-center text-muted small mt-2">
+              Already have an account?
+              <a href="#" class="text-primary fw-semibold" id="linkSwitchToLogin">Sign in</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= FORGOT PASSWORD MODAL ================= -->
+  <div class="auth-modal-backdrop d-none" id="forgotModalBackdrop">
+    <div class="auth-modal-dialog" id="forgotModalDialog" role="dialog" aria-modal="true" aria-labelledby="forgotModalTitle">
+      <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+        <h5 class="modal-title mb-0 fs-6 fw-bold" id="forgotModalTitle">
+          <i class="fa-solid fa-unlock-keyhole text-primary me-2"></i>Reset Password
+        </h5>
+        <button type="button" class="btn-close btn-close-sm" id="btnCloseForgotModal" aria-label="Close"></button>
+      </div>
+
+      <form id="formForgotPassword" novalidate>
+        <div class="p-3">
+          <p class="text-muted small mb-3">
+            Enter your registered email address. We will simulate sending a password reset link to your inbox.
+          </p>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold" for="forgotEmail">Registered Email</label>
+            <div class="input-icon-group">
+              <i class="fa-regular fa-envelope field-icon"></i>
+              <input
+                class="form-control"
+                type="email"
+                id="forgotEmail"
+                required
+                placeholder="name@example.com"
+                autocomplete="email"
+              />
+            </div>
+            <div class="invalid-feedback" id="forgotEmailFeedback">Valid email address is required.</div>
           </div>
-          <a href="#" id="forgot">Forgot Password</a>
+
+          <div class="alert alert-light border small text-muted mb-0">
+            <i class="fa-solid fa-circle-info me-1 text-primary"></i>
+            This is a frontend demo. No actual email will be dispatched.
+          </div>
         </div>
-        <button class="btn btn-brand text-white w-100 mb-3" type="submit" id="btnLogin">Login</button>
-        <div class="text-center text-muted">
-          No account? <a href="register.html">Register</a>
-        </div>
-        <div class="alert alert-light border mt-3 mb-0 small">
-          Demo account: <strong>admin@quizpro.local</strong> / <strong>admin123</strong>
+
+        <div class="p-3 border-top bg-light d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCancelForgotModal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-brand text-white" id="btnSendResetLink">
+            <i class="fa-solid fa-paper-plane me-1"></i>Send Reset Link
+          </button>
         </div>
       </form>
     </div>
   </div>
-  <div class="toast-wrap" id="toastWrap"></div>
+
+  <!-- Global Toast Notifications Container -->
+  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+  <!-- Interactive Logic -->
   <script>
-    const s = QMS.getSettings();
-    document.documentElement.setAttribute('data-theme', s.theme || 'light');
+    (function () {
+      // 1. Theme Management
+      function applyThemeIcon() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const icon = document.getElementById('authThemeIcon');
+        if (icon) {
+          icon.className = currentTheme === 'dark' ? 'fa-regular fa-sun' : 'fa-regular fa-moon';
+        }
+      }
+      applyThemeIcon();
 
-    function toast(msg, type = 'success') {
-      const wrap = document.getElementById('toastWrap');
-      const el = document.createElement('div');
-      el.className = `toast-item ${type}`;
-      el.textContent = msg;
-      wrap.appendChild(el);
-      setTimeout(() => el.remove(), 3200);
-    }
+      try {
+        const s = QMS.getSettings();
+        if (s.systemName) {
+          document.querySelectorAll('[data-system-name]').forEach((el) => {
+            el.textContent = s.systemName;
+          });
+        }
+      } catch (_) {}
 
-    document.getElementById('togglePassword').addEventListener('click', () => {
-      const input = document.getElementById('password');
-      const icon = document.querySelector('#togglePassword i');
-      const show = input.type === 'password';
-      input.type = show ? 'text' : 'password';
-      icon.className = show ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
-    });
+      document.getElementById('btnAuthThemeToggle')?.addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        QMS.saveSettings({ theme: next });
+        applyThemeIcon();
+        toast(`Switched to ${next} theme`, 'info');
+      });
 
-    document.getElementById('forgot').addEventListener('click', (e) => {
-      e.preventDefault();
-      toast('Frontend demo only — password reset is not available.', 'warning');
-    });
-
-    document.getElementById('loginForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const remember = document.getElementById('remember').checked;
-      const btn = document.getElementById('btnLogin');
-
-      if (!form.checkValidity()) {
-        form.classList.add('was-validated');
-        toast('Please enter a valid email and password', 'error');
-        return;
+      // 2. Toast Utility
+      function toast(message, type = 'success', duration = 3500) {
+        const wrap = document.getElementById('toastWrap');
+        if (!wrap) return;
+        const icons = {
+          success: 'fa-solid fa-circle-check',
+          error: 'fa-solid fa-circle-xmark',
+          danger: 'fa-solid fa-circle-xmark',
+          warning: 'fa-solid fa-triangle-exclamation',
+          info: 'fa-solid fa-circle-info'
+        };
+        const normType = type === 'danger' ? 'error' : type;
+        const el = document.createElement('div');
+        el.className = `toast-item ${normType}`;
+        el.setAttribute('role', 'alert');
+        el.innerHTML = `
+          <div class="d-flex align-items-center gap-2">
+            <i class="${icons[type] || icons.info}"></i>
+            <div class="flex-grow-1">${escapeHtml(message)}</div>
+            <button type="button" class="btn-close btn-close-sm ms-2" aria-label="Close" style="font-size:0.75rem"></button>
+          </div>
+        `;
+        const closeBtn = el.querySelector('.btn-close');
+        let timer = setTimeout(() => el.remove(), duration);
+        closeBtn?.addEventListener('click', () => {
+          clearTimeout(timer);
+          el.remove();
+        });
+        wrap.appendChild(el);
       }
 
-      btn.disabled = true;
-      btn.textContent = 'Signing in...';
-      const result = QMS.login(email, password, remember);
-      if (!result.ok) {
-        btn.disabled = false;
-        btn.textContent = 'Login';
-        toast(result.error, 'error');
-        return;
+      function escapeHtml(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
       }
 
-      toast('Login successful', 'success');
-      const params = new URLSearchParams(location.search);
-      const next = params.get('next') || 'index.html#dashboard';
-      setTimeout(() => location.replace(next), 350);
-    });
+      // 3. Tab Switching Logic
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabRegister = document.getElementById('tabBtnRegister');
+      const paneLogin = document.getElementById('paneLogin');
+      const paneRegister = document.getElementById('paneRegister');
+
+      function switchTab(activeTab) {
+        if (activeTab === 'login') {
+          tabLogin.classList.add('active');
+          tabLogin.setAttribute('aria-selected', 'true');
+          tabRegister.classList.remove('active');
+          tabRegister.setAttribute('aria-selected', 'false');
+          paneLogin.classList.remove('d-none');
+          paneRegister.classList.add('d-none');
+        } else {
+          tabRegister.classList.add('active');
+          tabRegister.setAttribute('aria-selected', 'true');
+          tabLogin.classList.remove('active');
+          tabLogin.setAttribute('aria-selected', 'false');
+          paneRegister.classList.remove('d-none');
+          paneLogin.classList.add('d-none');
+        }
+      }
+
+      tabLogin.addEventListener('click', () => switchTab('login'));
+      tabRegister.addEventListener('click', () => switchTab('register'));
+      document.getElementById('linkSwitchToLogin')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        switchTab('login');
+      });
+
+      const urlParams = new URLSearchParams(location.search);
+      if (urlParams.get('tab') === 'register' || location.hash === '#register') {
+        switchTab('register');
+      }
+
+      // 4. Password Visibility Toggles
+      function setupPasswordToggle(btnId, inputId) {
+        const btn = document.getElementById(btnId);
+        const input = document.getElementById(inputId);
+        if (!btn || !input) return;
+        btn.addEventListener('click', () => {
+          const isPass = input.type === 'password';
+          input.type = isPass ? 'text' : 'password';
+          const icon = btn.querySelector('i');
+          if (icon) {
+            icon.className = isPass ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+          }
+        });
+      }
+      setupPasswordToggle('toggleLoginPassword', 'loginPassword');
+      setupPasswordToggle('toggleRegPassword', 'regPassword');
+      setupPasswordToggle('toggleRegConfirmPassword', 'regConfirmPassword');
+
+      // 5. Quick Fill Demo Credentials
+      document.getElementById('btnFillDemo1')?.addEventListener('click', () => {
+        document.getElementById('loginEmail').value = 'admin@quizpro.local';
+        document.getElementById('loginPassword').value = 'admin123';
+        clearValidation(document.getElementById('formLogin'));
+        toast('Demo credentials auto-filled', 'info');
+      });
+
+      document.getElementById('btnFillDemo2')?.addEventListener('click', () => {
+        document.getElementById('loginEmail').value = 'admin@quizmaster.com';
+        document.getElementById('loginPassword').value = 'admin123';
+        clearValidation(document.getElementById('formLogin'));
+        toast('Demo credentials auto-filled', 'info');
+      });
+
+      // 6. Field Validation Helpers
+      function setFieldStatus(input, isValid, message = '') {
+        input.classList.toggle('is-invalid', !isValid);
+        input.classList.toggle('is-valid', isValid);
+        const feedback = input.closest('.mb-3')?.querySelector('.invalid-feedback');
+        if (feedback) {
+          if (message) feedback.textContent = message;
+          feedback.style.display = isValid ? 'none' : 'block';
+        }
+      }
+
+      function clearValidation(form) {
+        form.querySelectorAll('.is-invalid, .is-valid').forEach((el) => {
+          el.classList.remove('is-invalid', 'is-valid');
+        });
+        form.querySelectorAll('.invalid-feedback').forEach((el) => {
+          el.style.display = 'none';
+        });
+      }
+
+      // 7. Login Submission
+      document.getElementById('formLogin').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('loginEmail');
+        const passInput = document.getElementById('loginPassword');
+        const rememberInput = document.getElementById('loginRemember');
+        const submitBtn = document.getElementById('btnLoginSubmit');
+
+        const email = emailInput.value.trim();
+        const password = passInput.value;
+        const remember = rememberInput.checked;
+
+        let valid = true;
+
+        // Email validation
+        if (!email) {
+          setFieldStatus(emailInput, false, 'Email is required.');
+          valid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setFieldStatus(emailInput, false, 'Please enter a valid email address.');
+          valid = false;
+        } else {
+          setFieldStatus(emailInput, true);
+        }
+
+        // Password validation
+        if (!password) {
+          setFieldStatus(passInput, false, 'Password is required.');
+          valid = false;
+        } else {
+          setFieldStatus(passInput, true);
+        }
+
+        if (!valid) {
+          toast('Please correct the highlighted form errors.', 'error');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Signing In...';
+
+        const result = QMS.login(email, password, remember);
+
+        if (!result.ok) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Sign In to Dashboard';
+          setFieldStatus(emailInput, false, result.error);
+          setFieldStatus(passInput, false, result.error);
+          toast(result.error || 'Invalid credentials', 'error');
+          return;
+        }
+
+        toast('Authentication successful! Loading dashboard...', 'success');
+        const params = new URLSearchParams(location.search);
+        const next = params.get('next') || 'index.html#/dashboard';
+        setTimeout(() => {
+          location.replace(next);
+        }, 400);
+      });
+
+      // 8. Registration Submission
+      document.getElementById('formRegister').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nameInput = document.getElementById('regFullName');
+        const emailInput = document.getElementById('regEmail');
+        const phoneInput = document.getElementById('regPhone');
+        const passInput = document.getElementById('regPassword');
+        const confirmInput = document.getElementById('regConfirmPassword');
+        const submitBtn = document.getElementById('btnRegisterSubmit');
+
+        const fullName = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const phone = phoneInput.value.trim();
+        const password = passInput.value;
+        const confirm = confirmInput.value;
+
+        let valid = true;
+
+        // Full name
+        if (!fullName) {
+          setFieldStatus(nameInput, false, 'Full Name is required.');
+          valid = false;
+        } else {
+          setFieldStatus(nameInput, true);
+        }
+
+        // Email
+        if (!email) {
+          setFieldStatus(emailInput, false, 'Email is required.');
+          valid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setFieldStatus(emailInput, false, 'Please enter a valid email address.');
+          valid = false;
+        } else {
+          // Check if already registered
+          const existing = (QMS.getUsers() || []).some(
+            (u) => String(u.email || '').toLowerCase() === email.toLowerCase()
+          );
+          if (existing) {
+            setFieldStatus(emailInput, false, 'This email address is already registered.');
+            valid = false;
+          } else {
+            setFieldStatus(emailInput, true);
+          }
+        }
+
+        // Phone
+        if (!phone) {
+          setFieldStatus(phoneInput, false, 'Phone number is required.');
+          valid = false;
+        } else if (!/^[\d\s+\-()]{7,20}$/.test(phone)) {
+          setFieldStatus(phoneInput, false, 'Please enter a valid phone number format.');
+          valid = false;
+        } else {
+          setFieldStatus(phoneInput, true);
+        }
+
+        // Password length
+        if (!password) {
+          setFieldStatus(passInput, false, 'Password is required.');
+          valid = false;
+        } else if (password.length < 6) {
+          setFieldStatus(passInput, false, 'Password must be at least 6 characters long.');
+          valid = false;
+        } else {
+          setFieldStatus(passInput, true);
+        }
+
+        // Password confirmation match
+        if (!confirm) {
+          setFieldStatus(confirmInput, false, 'Please confirm your password.');
+          valid = false;
+        } else if (confirm !== password) {
+          setFieldStatus(confirmInput, false, 'Password confirmation does not match.');
+          valid = false;
+        } else {
+          setFieldStatus(confirmInput, true);
+        }
+
+        if (!valid) {
+          toast('Please correct the registration errors.', 'error');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Creating Account...';
+
+        const regResult = QMS.registerUser({ fullName, email, phone, password });
+
+        if (!regResult.ok) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-user-check me-2"></i>Create Account &amp; Continue';
+          toast(regResult.error || 'Registration failed.', 'error');
+          return;
+        }
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-user-check me-2"></i>Create Account &amp; Continue';
+
+        toast('Registration successful! You can now sign in with your credentials.', 'success', 4500);
+
+        // Reset form and switch to login tab with email pre-filled
+        document.getElementById('formRegister').reset();
+        clearValidation(document.getElementById('formRegister'));
+
+        document.getElementById('loginEmail').value = email;
+        document.getElementById('loginPassword').value = '';
+        switchTab('login');
+        document.getElementById('loginPassword').focus();
+      });
+
+      // 9. Forgot Password Modal
+      const modalBackdrop = document.getElementById('forgotModalBackdrop');
+      const forgotEmailInput = document.getElementById('forgotEmail');
+      let forgotTriggerEl = null;
+
+      function openForgotModal() {
+        forgotTriggerEl = document.activeElement;
+        modalBackdrop.classList.remove('d-none');
+        const prefill = document.getElementById('loginEmail').value.trim();
+        if (prefill) forgotEmailInput.value = prefill;
+        setTimeout(() => forgotEmailInput.focus(), 80);
+      }
+
+      function closeForgotModal() {
+        modalBackdrop.classList.add('d-none');
+        clearValidation(document.getElementById('formForgotPassword'));
+        if (forgotTriggerEl && typeof forgotTriggerEl.focus === 'function') {
+          setTimeout(() => forgotTriggerEl.focus(), 50);
+        }
+      }
+
+      modalBackdrop?.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          const focusables = modalBackdrop.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      });
+
+      document.getElementById('btnForgotPwd')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        openForgotModal();
+      });
+
+      document.getElementById('btnCloseForgotModal')?.addEventListener('click', closeForgotModal);
+      document.getElementById('btnCancelForgotModal')?.addEventListener('click', closeForgotModal);
+
+      modalBackdrop?.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) closeForgotModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modalBackdrop.classList.contains('d-none')) {
+          closeForgotModal();
+        }
+      });
+
+      document.getElementById('formForgotPassword')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = forgotEmailInput.value.trim();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          setFieldStatus(forgotEmailInput, false, 'Please enter a valid email address.');
+          toast('Please enter a valid email address', 'error');
+          return;
+        }
+
+        setFieldStatus(forgotEmailInput, true);
+        closeForgotModal();
+        toast(
+          `Simulated reset link dispatched to ${email}. (Frontend demo only — no email sent).`,
+          'success',
+          5000
+        );
+      });
+    })();
   </script>
 </body>
 </html>

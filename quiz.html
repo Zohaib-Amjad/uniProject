@@ -5,41 +5,200 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="assets/icons/quizpro-logo.svg" />
   <link rel="mask-icon" href="assets/icons/quizpro-logo.svg" color="#0f6e56" />
-  <title>Quiz Attempt — QuizPro</title>
+  <title>Quiz Assessment — QuizPro</title>
   <link href="assets/vendor/bootstrap.min.css" rel="stylesheet" />
   <link href="assets/vendor/all.min.css" rel="stylesheet" />
   <link href="css/style.css" rel="stylesheet" />
+  <script src="assets/vendor/bootstrap.bundle.min.js"></script>
   <script src="js/storage.js?v=3"></script>
   <script>
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('qms_settings') || '{}');
+        var t = s.theme || localStorage.getItem('qms_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+        var f = s.fontSize || 'medium';
+        document.documentElement.classList.remove('font-small', 'font-medium', 'font-large');
+        document.documentElement.classList.add('font-' + f);
+        document.documentElement.setAttribute('data-font-size', f);
+        if (s.systemName) {
+          document.title = s.systemName + ' — Quiz Assessment';
+        }
+      } catch (e) {}
+    })();
     QMS.seedIfNeeded();
-    if (!QMS.requireAuthRedirect('login.html')) { /* redirected */ }
+    const params = new URLSearchParams(window.location.search);
+    const isAttemptFlow = params.has('quiz') || params.has('participant') || params.has('result') || params.has('retake') || params.has('start') || !!sessionStorage.getItem('qms_active_attempt');
+    if (!isAttemptFlow && !QMS.requireAuthRedirect('login.html')) {
+      /* redirected to login */
+    }
   </script>
 </head>
-<body>
-  <header class="topbar quiz-topbar">
-    <div class="topbar-left">
+<body class="quiz-body-page">
+  <a href="#quizApp" class="skip-to-content">Skip to content</a>
+  <header class="quiz-topbar">
+    <div class="topbar-left d-flex align-items-center gap-2">
       <img class="brand-mark brand-mark-sm" src="assets/icons/quizpro-logo.svg" alt="QuizPro logo" />
-      <strong data-system-name>QuizPro Admin</strong>
+      <strong data-system-name>QuizPro</strong>
+      <span class="badge-soft badge-muted d-none d-sm-inline" style="font-size:0.75rem;">Assessment Portal</span>
     </div>
-    <div class="topbar-right">
-      <a class="btn btn-sm btn-outline-secondary" href="index.html#attempts">Back to App</a>
+    <div class="topbar-right d-flex align-items-center gap-2">
+      <div id="topParticipantBadge" class="badge-soft badge-info d-none d-md-inline-flex align-items-center gap-1" style="font-size:0.85rem; padding: 0.35rem 0.65rem;">
+        <i class="fa fa-user"></i>
+        <span id="topParticipantName">Participant</span>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="quizThemeToggle" title="Toggle Theme" aria-label="Toggle Theme">
+        <i class="fa fa-moon" id="themeIcon"></i>
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="quizExitBtn">
+        <i class="fa fa-arrow-right-from-bracket me-1"></i>Exit
+      </button>
     </div>
   </header>
-  <main class="content quiz-content">
-    <div id="quizApp"></div>
+
+  <main class="content quiz-content" style="padding-top: 1.5rem; min-height: calc(100vh - 65px);">
+    <div class="container-xl">
+      <div id="quizApp"></div>
+    </div>
   </main>
+
+  <!-- Submit Confirmation Modal -->
+  <div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-labelledby="submitModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="submitModalLabel">
+            <i class="fa fa-circle-question text-brand"></i> Submit Quiz
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-3">Are you sure you want to finish and submit your quiz attempt? Please review your progress below:</p>
+          <div class="row g-2 text-center mb-3">
+            <div class="col-4">
+              <div class="p-2 border rounded bg-surface-2">
+                <div class="text-success fw-bold fs-5" id="confirmAnsweredCount">0</div>
+                <small class="text-muted">Answered</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-2 border rounded bg-surface-2">
+                <div class="text-danger fw-bold fs-5" id="confirmUnansweredCount">0</div>
+                <small class="text-muted">Unanswered</small>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="p-2 border rounded bg-surface-2">
+                <div class="text-warning fw-bold fs-5" id="confirmReviewCount">0</div>
+                <small class="text-muted">Marked Review</small>
+              </div>
+            </div>
+          </div>
+          <div id="confirmWarningAlert" class="alert alert-warning d-none" role="alert">
+            <i class="fa fa-triangle-exclamation me-1"></i>
+            <span id="confirmWarningText">You have unanswered questions.</span>
+          </div>
+          <small class="text-muted d-block">Once submitted, your answers will be graded immediately and you cannot return to modify them.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Working</button>
+          <button type="button" class="btn btn-brand text-white" id="modalConfirmSubmitBtn">Yes, Submit Quiz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeout Modal -->
+  <div class="modal fade" id="timeoutModal" tabindex="-1" aria-labelledby="timeoutModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-center p-3">
+        <div class="modal-body">
+          <div class="mb-3">
+            <i class="fa fa-hourglass-end text-danger fa-3x fa-fade"></i>
+          </div>
+          <h4 class="modal-title fw-bold mb-2" id="timeoutModalLabel">Time's Up!</h4>
+          <p class="text-muted mb-3">Your allocated quiz duration has ended. Your answers are being submitted automatically...</p>
+          <div class="spinner-border text-brand" role="status">
+            <span class="visually-hidden">Submitting...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exit Confirmation Modal -->
+  <div class="modal fade" id="exitConfirmModal" tabindex="-1" aria-labelledby="exitModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="exitModalLabel"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Exit Quiz?</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>You have a quiz currently in progress. If you leave now, the timer will keep running until your attempt expires or is submitted.</p>
+          <p class="text-muted mb-0">Do you wish to exit to the dashboard?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Resume Quiz</button>
+          <button type="button" class="btn btn-danger" id="confirmExitBtn">Leave Quiz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Toast Container -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="quizToastContainer" style="z-index: 1090;"></div>
+
   <script src="js/quiz.js"></script>
   <script>
-    if (!QMS.isAuthenticated()) {
-      /* guard already redirected */
-    } else {
-      document.documentElement.setAttribute('data-theme', QMS.getSettings().theme || 'light');
-      document.title = `${QMS.getSettings().systemName || 'QuizPro Admin'} — Quiz`;
-      document.querySelectorAll('[data-system-name]').forEach((el) => {
-        el.textContent = QMS.getSettings().systemName || 'QuizPro Admin';
-      });
-      QuizEngine.boot();
+    // Theme & Settings sync
+    const settings = QMS.getSettings();
+    const currentTheme = localStorage.getItem('qms_theme') || settings.theme || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    const currentFont = settings.fontSize || 'medium';
+    document.documentElement.classList.remove('font-small', 'font-medium', 'font-large');
+    document.documentElement.classList.add(`font-${currentFont}`);
+    document.documentElement.setAttribute('data-font-size', currentFont);
+
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) {
+      themeIcon.className = currentTheme === 'dark' ? 'fa fa-sun' : 'fa fa-moon';
     }
+
+    document.getElementById('quizThemeToggle')?.addEventListener('click', () => {
+      const active = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', active);
+      localStorage.setItem('qms_theme', active);
+      QMS.saveSettings({ theme: active });
+      if (themeIcon) themeIcon.className = active === 'dark' ? 'fa fa-sun' : 'fa fa-moon';
+    });
+
+    const quizSysName = settings.systemName || 'QuizPro';
+    document.title = `${quizSysName} — Quiz`;
+    document.querySelectorAll('[data-system-name]').forEach((el) => {
+      el.textContent = quizSysName;
+    });
+
+    // Exit Button handler
+    document.getElementById('quizExitBtn')?.addEventListener('click', () => {
+      if (QuizEngine.hasActiveAttempt()) {
+        const exitModalEl = document.getElementById('exitConfirmModal');
+        if (exitModalEl && window.bootstrap?.Modal) {
+          const m = new bootstrap.Modal(exitModalEl);
+          m.show();
+        } else if (confirm('A quiz is in progress. Are you sure you want to leave?')) {
+          window.location.href = 'index.html#quizzes';
+        }
+      } else {
+        window.location.href = 'index.html#quizzes';
+      }
+    });
+
+    document.getElementById('confirmExitBtn')?.addEventListener('click', () => {
+      window.location.href = 'index.html#quizzes';
+    });
+
+    QuizEngine.boot();
   </script>
 </body>
 </html>

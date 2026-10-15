@@ -2,104 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/svg+xml" href="assets/icons/quizpro-logo.svg" />
-  <link rel="mask-icon" href="assets/icons/quizpro-logo.svg" color="#0f6e56" />
-  <title>Register — QuizPro Admin</title>
-  <link href="assets/vendor/bootstrap.min.css" rel="stylesheet" />
-  <link href="assets/vendor/all.min.css" rel="stylesheet" />
-  <link href="css/style.css" rel="stylesheet" />
-  <script src="js/storage.js?v=3"></script>
+  <meta http-equiv="refresh" content="0; url=login.html?tab=register" />
+  <title>Redirecting to Registration — QuizPro Admin</title>
   <script>
-    QMS.seedIfNeeded();
-    if (QMS.isAuthenticated()) location.replace('index.html');
-    document.title = `${QMS.getSettings().systemName || 'QuizPro Admin'} — Register`;
+    location.replace('login.html?tab=register');
   </script>
 </head>
-<body class="auth-body">
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="d-flex align-items-center gap-2 mb-3">
-        <img class="brand-mark" src="assets/icons/quizpro-logo.svg" alt="QuizPro logo" />
-        <strong>QuizPro Admin</strong>
-      </div>
-      <h1>Create account</h1>
-      <p>Register with your email, then sign in to continue.</p>
-      <form id="registerForm" novalidate autocomplete="on">
-        <div class="mb-3">
-          <label class="form-label" for="fullName">Full Name</label>
-          <input class="form-control" id="fullName" name="name" required autocomplete="name" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label" for="email">Email</label>
-          <input class="form-control" type="email" id="email" name="email" required autocomplete="email" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label" for="phone">Phone</label>
-          <input class="form-control" id="phone" name="tel" required autocomplete="tel" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label" for="password">Password</label>
-          <input class="form-control" type="password" id="password" required minlength="6" autocomplete="new-password" />
-        </div>
-        <div class="mb-3">
-          <label class="form-label" for="confirm">Confirm Password</label>
-          <input class="form-control" type="password" id="confirm" required minlength="6" autocomplete="new-password" />
-        </div>
-        <button class="btn btn-brand text-white w-100 mb-3" type="submit">Register</button>
-        <div class="text-center text-muted">
-          Already have an account? <a href="login.html">Login</a>
-        </div>
-      </form>
-    </div>
-  </div>
-  <div class="toast-wrap" id="toastWrap"></div>
-  <script>
-    document.documentElement.setAttribute('data-theme', QMS.getSettings().theme || 'light');
-
-    function toast(msg, type = 'success') {
-      const wrap = document.getElementById('toastWrap');
-      const el = document.createElement('div');
-      el.className = `toast-item ${type}`;
-      el.textContent = msg;
-      wrap.appendChild(el);
-      setTimeout(() => el.remove(), 3200);
-    }
-
-    document.getElementById('registerForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const fullName = document.getElementById('fullName').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const password = document.getElementById('password').value;
-      const confirm = document.getElementById('confirm').value;
-
-      if (!fullName || !email || !phone || !password) {
-        toast('All fields are required', 'error');
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        toast('Invalid email format', 'error');
-        return;
-      }
-      if (password.length < 6) {
-        toast('Password must be at least 6 characters', 'error');
-        return;
-      }
-      if (password !== confirm) {
-        toast('Password confirmation does not match', 'error');
-        return;
-      }
-
-      const result = QMS.registerUser({ fullName, email, phone, password });
-      if (!result.ok) {
-        toast(result.error, 'error');
-        return;
-      }
-      QMS.logout();
-      toast('Registration successful. Please login.', 'success');
-      setTimeout(() => location.replace('login.html'), 700);
-    });
-  </script>
+<body style="font-family:sans-serif;text-align:center;padding:50px;">
+  <p>Redirecting to <a href="login.html?tab=register">QuizPro Registration</a>...</p>
 </body>
 </html>
